@@ -31,3 +31,17 @@ export function fmtTime(date: Date, timeZone: string): string {
   const { h, mi } = parts(date, timeZone);
   return `${h}:${mi}`;
 }
+
+/**
+ * 우리가 수집한 풀이 시각들로 잔디 캘린더(unix초 UTC자정 -> 개수)를 만든다.
+ * 그룹 타임존 기준 날짜로 묶으므로 Heatmap 컴포넌트의 셀 배치와 일치한다.
+ */
+export function solvesToCalendar(dates: Date[], timeZone: string): Record<string, number> {
+  const cal: Record<string, number> = {};
+  for (const date of dates) {
+    const { y, mo, d } = parts(date, timeZone);
+    const key = Math.floor(Date.UTC(Number(y), Number(mo) - 1, Number(d)) / 1000);
+    cal[key] = (cal[key] ?? 0) + 1;
+  }
+  return cal;
+}

@@ -31,12 +31,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
 
   const [viewer] = viewerId
     ? await db
-        .select({ handle: schema.users.leetcodeHandle })
+        .select({ leetcode: schema.users.leetcodeHandle, programmers: schema.users.programmersHandle })
         .from(schema.users)
         .where(eq(schema.users.id, viewerId))
         .limit(1)
     : [];
-  const viewerLinked = Boolean(viewer?.handle);
+  const viewerLinked = Boolean(viewer?.leetcode || viewer?.programmers);
 
   const { start, end, weekOf } = weekBounds(new Date(), group.timezone);
 

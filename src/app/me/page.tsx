@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/db";
 import { fetchFullProfile } from "@/lib/leetcode";
+import { solvesToCalendar } from "@/lib/format";
 import { ProfileCard } from "@/components/ProfileCard";
-import { LeetCodeLink } from "@/components/LeetCodeLink";
+import { Heatmap } from "@/components/Heatmap";
+import { PlatformLink } from "@/components/PlatformLink";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,17 @@ export default async function MyProfile() {
     ? await fetchFullProfile(user.leetcodeHandle).catch(() => null)
     : null;
 
+  const pgSolves = await db
+    .select({ acceptedAt: schema.solveLogs.acceptedAt })
+    .from(schema.solveLogs)
+    .where(and(eq(schema.solveLogs.userId, userId), eq(schema.solveLogs.platform, "PROGRAMMERS")));
+  const pgCalendar = solvesToCalendar(
+    pgSolves.map((s) => s.acceptedAt),
+    user.timezone,
+  );
+
+  const linked = Boolean(user.leetcodeHandle || user.programmersHandle);
+
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
       <Link href="/" className="text-sm text-secondary hover:underline">
@@ -44,19 +57,34 @@ export default async function MyProfile() {
         </div>
       </div>
 
-      {profile ? (
+      {profile && (
         <div className="mt-8">
           <ProfileCard profile={profile} />
-          <details className="mt-3">
-            <summary className="cursor-pointer text-sm text-secondary hover:underline">
-              다른 LeetCode 계정으로 변경
-            </summary>
-            <LeetCodeLink />
-          </details>
         </div>
-      ) : (
-        <LeetCodeLink />
       )}
+
+      {pgSolves.length > 0 && (
+        <section className="card mt-6 p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">프로그래머스</h2>
+            <span className="text-sm text-secondary">
+              스터디 집계 <b style={{ color: "var(--text)" }}>{pgSolves.length}</b>문제
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="mb-2 text-sm font-semibold">잔디밭 🌱</div>
+            <Heatmap calendar={pgCalendar} />
+          </div>
+        </section>
+      )}
+
+      {/* 연동: 미연동이면 펼쳐서 유도, 이미 연동됐으면 접어둠 */}
+      <details className="mt-8" open={!linked}>
+        <summary className="cursor-pointer text-sm font-semibold">플랫폼 연동 관리</summary>
+        <div className="mt-3">
+          <PlatformLink />
+        </div>
+      </details>
 
       <section className="mt-10">
         <h2 className="text-xl font-semibold">내 스터디</h2>
@@ -80,12 +108,6 @@ export default async function MyProfile() {
           </div>
         )}
       </section>
-
-      {profile && (
-        <p className="mt-8 text-xs text-secondary">
-          LeetCode 계정을 바꾸려면 스터디 대시보드의 &quot;LeetCode 연동&quot;에서 다시 입력하세요.
-        </p>
-      )}
     </main>
   );
 }

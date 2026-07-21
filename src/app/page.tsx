@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { auth, signIn, signOut } from "@/auth";
 import { db, schema } from "@/db";
 import { HomeForms } from "./HomeForms";
-import { LeetCodeLink } from "@/components/LeetCodeLink";
+import { PlatformLink } from "@/components/PlatformLink";
 
 export const dynamic = "force-dynamic";
 
@@ -53,11 +53,11 @@ export default async function Home() {
     .where(eq(schema.memberships.userId, userId));
 
   const [me] = await db
-    .select({ handle: schema.users.leetcodeHandle })
+    .select({ leetcode: schema.users.leetcodeHandle, programmers: schema.users.programmersHandle })
     .from(schema.users)
     .where(eq(schema.users.id, userId))
     .limit(1);
-  const linked = Boolean(me?.handle);
+  const linked = Boolean(me?.leetcode || me?.programmers);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14">
@@ -87,12 +87,12 @@ export default async function Home() {
       {!linked && (
         <section className="rise mt-8">
           <div
-            className="rounded-xl px-4 py-3 text-sm"
+            className="mb-4 rounded-xl px-4 py-3 text-sm"
             style={{ background: "color-mix(in srgb, var(--accent) 10%, transparent)", color: "var(--accent)" }}
           >
-            먼저 <b>LeetCode를 연동</b>하세요. 연동하면 풀이가 자동 집계되고 잔디밭이 채워져요.
+            먼저 <b>LeetCode 또는 프로그래머스</b>를 연동하세요. 둘 중 하나는 연동해야 풀이가 집계돼요.
           </div>
-          <LeetCodeLink />
+          <PlatformLink />
         </section>
       )}
 

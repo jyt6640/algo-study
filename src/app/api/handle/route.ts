@@ -6,36 +6,39 @@ import { currentUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-// GET — 로그인 사용자의 현재 연동 핸들
+// GET — 로그인 사용자의 현재 연동 핸들 (플랫폼별)
 export async function GET() {
   const userId = await currentUserId();
-  if (!userId) return NextResponse.json({ handle: null });
+  if (!userId) return NextResponse.json({ leetcode: null, programmers: null });
   const [u] = await db
-    .select({ handle: schema.users.leetcodeHandle })
+    .select({ leetcode: schema.users.leetcodeHandle, programmers: schema.users.programmersHandle })
     .from(schema.users)
     .where(eq(schema.users.id, userId))
     .limit(1);
-  return NextResponse.json({ handle: u?.handle ?? null });
+  return NextResponse.json({ leetcode: u?.leetcode ?? null, programmers: u?.programmers ?? null });
 }
 
-// POST { handle } — 실재 계정 검증 후 로그인 사용자에 연동
+// POST { handle, platform } — 연동
+//   LEETCODE: 실재 계정 검증 후 저장
+//   PROGRAMMERS: 공개 API 가 없어 자기 선언값 그대로 저장
 export async function POST(req: NextRequest) {
   const userId = await currentUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   const handle = typeof body?.handle === "string" ? body.handle.trim() : "";
+  const platform: "LEETCODE" | "PROGRAMMERS" = body?.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";
   if (!handle) return NextResponse.json({ error: "handle 이 필요합니다." }, { status: 400 });
+
+  if (platform === "PROGRAMMERS") {
+    await db.update(schema.users).set({ programmersHandle: handle }).where(eq(schema.users.id, userId));
+    return NextResponse.json({ ok: true, platform, handle });
+  }
 
   const profile = await fetchUserProfile(handle).catch(() => null);
   if (!profile) {
     return NextResponse.json({ error: "존재하지 않는 LeetCode 계정입니다." }, { status: 404 });
   }
-
-  await db
-    .update(schema.users)
-    .set({ leetcodeHandle: profile.username })
-    .where(eq(schema.users.id, userId));
-
-  return NextResponse.json({ ok: true, profile });
+  await db.update(schema.users).set({ leetcodeHandle: profile.username }).where(eq(schema.users.id, userId));
+  return NextResponse.json({ ok: true, platform, profile });
 }

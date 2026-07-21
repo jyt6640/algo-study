@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, solvesToCalendar } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
 import { fetchFullProfile } from "@/lib/leetcode";
 import { ProfileCard } from "@/components/ProfileCard";
+import { Heatmap } from "@/components/Heatmap";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,13 @@ export default async function MemberPage({
     ? await fetchFullProfile(user.leetcodeHandle).catch(() => null)
     : null;
 
+  // 프로그래머스: 공개 API 가 없어 우리가 수집한 풀이로 잔디를 만든다
+  const pgSolves = solves.filter((s) => s.platform === "PROGRAMMERS");
+  const pgCalendar = solvesToCalendar(
+    pgSolves.map((s) => s.acceptedAt),
+    group.timezone,
+  );
+
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
       <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
@@ -76,6 +84,22 @@ export default async function MemberPage({
         <div className="mt-8">
           <ProfileCard profile={profile} />
         </div>
+      )}
+
+      {pgSolves.length > 0 && (
+        <section className="card mt-6 p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">프로그래머스</h2>
+            <span className="text-sm text-secondary">
+              스터디 집계 <b style={{ color: "var(--text)" }}>{pgSolves.length}</b>문제
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-secondary">공개 API가 없어 스터디에 올린 풀이로 잔디를 그려요.</p>
+          <div className="mt-4">
+            <div className="mb-2 text-sm font-semibold">잔디밭 🌱</div>
+            <Heatmap calendar={pgCalendar} />
+          </div>
+        </section>
       )}
 
       <h2 className="mt-10 text-xl font-semibold">푼 문제</h2>
