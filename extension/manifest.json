@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "7일 7솔 — 알고리즘 스터디 업로더",
+  "version": "0.1.0",
+  "description": "LeetCode 문제 페이지에서 버튼 클릭으로 Accepted 코드를 스터디에 업로드합니다.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "7일 7솔 설정"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://leetcode.com/*"]
+    }
+  ]
+}

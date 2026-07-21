@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 280px;
+        margin: 0;
+        padding: 14px;
+        font-family: system-ui, "Apple SD Gothic Neo", sans-serif;
+        background: #0b0d10;
+        color: #e8eaed;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 10px;
+      }
+      label {
+        font-size: 11px;
+        color: #9ca3af;
+        display: block;
+        margin: 8px 0 3px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 7px 8px;
+        border-radius: 8px;
+        border: 1px solid #374151;
+        background: #030712;
+        color: #e8eaed;
+        font-size: 12px;
+      }
+      button {
+        margin-top: 12px;
+        width: 100%;
+        padding: 8px;
+        border: none;
+        border-radius: 8px;
+        background: #10b981;
+        color: #052e1a;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .hint {
+        margin-top: 8px;
+        font-size: 10px;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+      .ok {
+        color: #34d399;
+        font-size: 11px;
+        margin-top: 8px;
+        min-height: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>7일 7솔 연동 설정</h1>
+    <label>API 주소</label>
+    <input id="apiBase" placeholder="http://localhost:3000" />
+    <label>연동 토큰</label>
+    <input id="token" placeholder="웹앱에서 발급받은 토큰" />
+    <button id="save">저장</button>
+    <div class="ok" id="status"></div>
+    <p class="hint">
+      LeetCode 문제 페이지에서 Accepted 후 우측 하단 "📤 스터디 업로드" 버튼을 누르면 코드가 전송됩니다.
+    </p>
+    <script src="popup.js"></script>
+  </body>
+</html>
