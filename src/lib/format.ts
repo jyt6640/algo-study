@@ -45,3 +45,23 @@ export function solvesToCalendar(dates: Date[], timeZone: string): Record<string
   }
   return cal;
 }
+
+export type DayBreakdown = { leetcode: number; programmers: number };
+
+/** 잔디 통합용: 날짜별 플랫폼별 개수. total 은 색상, breakdown 은 툴팁에 쓴다. */
+export function solvesToPlatformCalendar(
+  solves: { acceptedAt: Date; platform: string }[],
+  timeZone: string,
+): { total: Record<string, number>; breakdown: Record<string, DayBreakdown> } {
+  const total: Record<string, number> = {};
+  const breakdown: Record<string, DayBreakdown> = {};
+  for (const s of solves) {
+    const { y, mo, d } = parts(s.acceptedAt, timeZone);
+    const key = String(Math.floor(Date.UTC(Number(y), Number(mo) - 1, Number(d)) / 1000));
+    total[key] = (total[key] ?? 0) + 1;
+    if (!breakdown[key]) breakdown[key] = { leetcode: 0, programmers: 0 };
+    if (s.platform === "PROGRAMMERS") breakdown[key].programmers += 1;
+    else breakdown[key].leetcode += 1;
+  }
+  return { total, breakdown };
+}

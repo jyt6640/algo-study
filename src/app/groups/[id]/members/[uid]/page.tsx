@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
-import { fmtDateTime, solvesToCalendar } from "@/lib/format";
+import { fmtDateTime, solvesToPlatformCalendar } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
 import { fetchFullProfile } from "@/lib/leetcode";
 import { ProfileCard } from "@/components/ProfileCard";
@@ -49,12 +49,10 @@ export default async function MemberPage({
     ? await fetchFullProfile(user.leetcodeHandle).catch(() => null)
     : null;
 
-  // 프로그래머스: 공개 API 가 없어 우리가 수집한 풀이로 잔디를 만든다
-  const pgSolves = solves.filter((s) => s.platform === "PROGRAMMERS");
-  const pgCalendar = solvesToCalendar(
-    pgSolves.map((s) => s.acceptedAt),
-    group.timezone,
-  );
+  // 통합 잔디: 우리가 수집한 풀이(LeetCode 폴링 + 확장, 프로그래머스 확장)를 한 잔디로.
+  const { total: combinedCal, breakdown: combinedBreak } = solvesToPlatformCalendar(solves, group.timezone);
+  const lcCount = solves.filter((s) => s.platform === "LEETCODE").length;
+  const pgCount = solves.filter((s) => s.platform === "PROGRAMMERS").length;
 
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
@@ -82,23 +80,23 @@ export default async function MemberPage({
 
       {profile && (
         <div className="mt-8">
-          <ProfileCard profile={profile} />
+          <ProfileCard profile={profile} showHeatmap={false} />
         </div>
       )}
 
-      {pgSolves.length > 0 && (
+      {solves.length > 0 && (
         <section className="card mt-6 p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">프로그래머스</h2>
-            <span className="text-sm text-secondary">
-              스터디 집계 <b style={{ color: "var(--text)" }}>{pgSolves.length}</b>문제
-            </span>
+            <div className="text-sm font-semibold">잔디밭 🌱</div>
+            <div className="flex gap-3 text-xs text-secondary">
+              <span>리트코드 {lcCount}</span>
+              <span>프로그래머스 {pgCount}</span>
+            </div>
           </div>
-          <p className="mt-1 text-xs text-secondary">공개 API가 없어 스터디에 올린 풀이로 잔디를 그려요.</p>
-          <div className="mt-4">
-            <div className="mb-2 text-sm font-semibold">잔디밭 🌱</div>
-            <Heatmap calendar={pgCalendar} />
-          </div>
+          <p className="mb-3 mt-1 text-xs text-secondary">
+            스터디에 집계된 풀이 기준. 칸에 마우스를 올리면 플랫폼별 개수가 보여요.
+          </p>
+          <Heatmap calendar={combinedCal} breakdown={combinedBreak} />
         </section>
       )}
 

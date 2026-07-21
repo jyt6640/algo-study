@@ -4,10 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/db";
 import { fetchFullProfile } from "@/lib/leetcode";
-import { solvesToCalendar } from "@/lib/format";
+import { solvesToPlatformCalendar } from "@/lib/format";
 import { ProfileCard } from "@/components/ProfileCard";
 import { Heatmap } from "@/components/Heatmap";
 import { PlatformLink } from "@/components/PlatformLink";
+import { RefreshButton } from "./RefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +30,13 @@ export default async function MyProfile() {
     ? await fetchFullProfile(user.leetcodeHandle).catch(() => null)
     : null;
 
-  const pgSolves = await db
-    .select({ acceptedAt: schema.solveLogs.acceptedAt })
+  const allSolves = await db
+    .select({ acceptedAt: schema.solveLogs.acceptedAt, platform: schema.solveLogs.platform })
     .from(schema.solveLogs)
-    .where(and(eq(schema.solveLogs.userId, userId), eq(schema.solveLogs.platform, "PROGRAMMERS")));
-  const pgCalendar = solvesToCalendar(
-    pgSolves.map((s) => s.acceptedAt),
-    user.timezone,
-  );
+    .where(eq(schema.solveLogs.userId, userId));
+  const { total: combinedCal, breakdown: combinedBreak } = solvesToPlatformCalendar(allSolves, user.timezone);
+  const lcCount = allSolves.filter((s) => s.platform === "LEETCODE").length;
+  const pgCount = allSolves.filter((s) => s.platform === "PROGRAMMERS").length;
 
   const linked = Boolean(user.leetcodeHandle || user.programmersHandle);
 
@@ -57,24 +57,29 @@ export default async function MyProfile() {
         </div>
       </div>
 
-      {profile && (
-        <div className="mt-8">
-          <ProfileCard profile={profile} />
+      {user.leetcodeHandle && (
+        <div className="mt-6 flex justify-end">
+          <RefreshButton />
         </div>
       )}
 
-      {pgSolves.length > 0 && (
+      {profile && (
+        <div className="mt-3">
+          <ProfileCard profile={profile} showHeatmap={false} />
+        </div>
+      )}
+
+      {allSolves.length > 0 && (
         <section className="card mt-6 p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">프로그래머스</h2>
-            <span className="text-sm text-secondary">
-              스터디 집계 <b style={{ color: "var(--text)" }}>{pgSolves.length}</b>문제
-            </span>
+            <div className="text-sm font-semibold">잔디밭 🌱</div>
+            <div className="flex gap-3 text-xs text-secondary">
+              <span>리트코드 {lcCount}</span>
+              <span>프로그래머스 {pgCount}</span>
+            </div>
           </div>
-          <div className="mt-4">
-            <div className="mb-2 text-sm font-semibold">잔디밭 🌱</div>
-            <Heatmap calendar={pgCalendar} />
-          </div>
+          <p className="mb-3 mt-1 text-xs text-secondary">칸에 마우스를 올리면 플랫폼별 개수가 보여요.</p>
+          <Heatmap calendar={combinedCal} breakdown={combinedBreak} />
         </section>
       )}
 

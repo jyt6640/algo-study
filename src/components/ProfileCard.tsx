@@ -1,7 +1,13 @@
 import type { LeetCodeFullProfile } from "@/lib/leetcode";
 import { Heatmap } from "./Heatmap";
 
-export function ProfileCard({ profile }: { profile: LeetCodeFullProfile }) {
+export function ProfileCard({
+  profile,
+  showHeatmap = true,
+}: {
+  profile: LeetCodeFullProfile;
+  showHeatmap?: boolean;
+}) {
   return (
     <section className="card p-6">
       <div className="flex items-center gap-4">
@@ -37,10 +43,12 @@ export function ProfileCard({ profile }: { profile: LeetCodeFullProfile }) {
         <Stat label="활동일" value={profile.totalActiveDays} suffix="일" />
       </div>
 
-      <div className="mt-6">
-        <div className="mb-2 text-sm font-semibold">잔디밭 🌱</div>
-        <Heatmap calendar={profile.calendar} />
-      </div>
+      {showHeatmap && (
+        <div className="mt-6">
+          <div className="mb-2 text-sm font-semibold">잔디밭 🌱</div>
+          <Heatmap calendar={profile.calendar} />
+        </div>
+      )}
     </section>
   );
 }

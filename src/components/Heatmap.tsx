@@ -21,8 +21,15 @@ function grassVar(count: number): string {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 type Hover = { x: number; y: number; label: string } | null;
+type Breakdown = Record<string, { leetcode: number; programmers: number }>;
 
-export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
+export function Heatmap({
+  calendar,
+  breakdown,
+}: {
+  calendar: Record<string, number>;
+  breakdown?: Breakdown;
+}) {
   const [hover, setHover] = useState<Hover>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +59,10 @@ export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
       const cx = c * STEP;
       const cy = topPad + r * STEP;
       const d = new Date(dayMs);
-      const label = `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · ${count > 0 ? `${count}회 제출` : "제출 없음"}`;
+      const b = breakdown?.[String(key)];
+      const label = b
+        ? `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · 리트코드 ${b.leetcode} · 프로그래머스 ${b.programmers}`
+        : `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · ${count > 0 ? `${count}회 제출` : "제출 없음"}`;
       cells.push(
         <rect
           key={`${c}-${r}`}
