@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { auth, signIn, signOut } from "@/auth";
 import { db, schema } from "@/db";
 import { HomeForms } from "./HomeForms";
+import { LeetCodeLink } from "@/components/LeetCodeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,13 @@ export default async function Home() {
     .innerJoin(schema.groups, eq(schema.groups.id, schema.memberships.groupId))
     .where(eq(schema.memberships.userId, userId));
 
+  const [me] = await db
+    .select({ handle: schema.users.leetcodeHandle })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1);
+  const linked = Boolean(me?.handle);
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-14">
       <header className="flex items-center justify-between">
@@ -75,6 +83,18 @@ export default async function Home() {
           </form>
         </div>
       </header>
+
+      {!linked && (
+        <section className="rise mt-8">
+          <div
+            className="rounded-xl px-4 py-3 text-sm"
+            style={{ background: "color-mix(in srgb, var(--accent) 10%, transparent)", color: "var(--accent)" }}
+          >
+            먼저 <b>LeetCode를 연동</b>하세요. 연동하면 풀이가 자동 집계되고 잔디밭이 채워져요.
+          </div>
+          <LeetCodeLink />
+        </section>
+      )}
 
       <section className="rise mt-10">
         <h2 className="text-xl font-semibold">내 스터디</h2>
