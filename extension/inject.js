@@ -26,12 +26,24 @@
   function handleCheckPayload(json) {
     if (!json || json.state !== "SUCCESS") return;
     const accepted = json.status_msg === "Accepted" || json.status_code === 10;
+    // Accepted 시점에 에디터 코드를 함께 캡처해 자동 업로드에 쓴다
+    let code = "";
+    try {
+      const monaco = window.monaco;
+      if (monaco?.editor) {
+        const models = monaco.editor.getModels();
+        if (models.length) code = models[0].getValue();
+      }
+    } catch (e) {
+      /* noop */
+    }
     window.postMessage(
       {
         type: "ALGOSTUDY_SUBMIT_RESULT",
         accepted,
         statusMsg: json.status_msg || "",
         language: json.pretty_lang || json.lang || "",
+        code,
       },
       "*",
     );

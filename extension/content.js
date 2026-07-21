@@ -31,22 +31,56 @@ function captureCode() {
   });
 }
 
+let autoUploadedFor = null; // 자동 업로드 중복 방지 (slug)
+
 // inject.js 의 제출 결과 수신
 window.addEventListener("message", (ev) => {
   if (ev.source !== window || ev.data?.type !== "ALGOSTUDY_SUBMIT_RESULT") return;
   const btn = document.getElementById("algostudy-btn");
   if (ev.data.accepted) {
-    lastAccepted = { slug: currentSlug(), language: ev.data.language, at: new Date().toISOString() };
+    const slug = currentSlug();
+    lastAccepted = { slug, language: ev.data.language, at: new Date().toISOString(), code: ev.data.code };
     if (btn) {
-      btn.textContent = "✅ Accepted — 업로드";
+      btn.textContent = "✅ Accepted — 업로드됨";
       btn.style.background = "#22c55e";
       btn.classList.add("algostudy-pulse");
     }
+    // 버튼 없이 자동 업로드
+    autoUpload(slug, ev.data.code || "", ev.data.language || "", lastAccepted.at);
   } else if (btn) {
     btn.textContent = `❌ ${ev.data.statusMsg || "실패"} — 그래도 업로드`;
     btn.style.background = "#6b7280";
   }
 });
+
+// 감지되면 버튼 클릭 없이 자동으로 코드까지 업로드 (설정 안 됐으면 조용히 스킵)
+async function autoUpload(slug, code, language, at) {
+  if (!slug || autoUploadedFor === slug) return;
+  const cfg = await chrome.storage.local.get(["apiBase", "token"]);
+  if (!cfg.apiBase || !cfg.token) return;
+  autoUploadedFor = slug;
+  if (!code) {
+    const c = await captureCode();
+    code = c.code;
+    language = language || c.language;
+  }
+  chrome.runtime.sendMessage(
+    {
+      type: "ALGOSTUDY_INGEST",
+      payload: {
+        problemSlug: slug,
+        problemTitle: document.title.replace(/ - LeetCode.*$/, "").trim(),
+        language,
+        code,
+        acceptedAt: at || new Date().toISOString(),
+      },
+    },
+    (res) => {
+      if (res?.ok) toast(res.isNew ? "자동 업로드 ✓" : "코드 업데이트 ✓");
+      else if (res?.error) autoUploadedFor = null; // 실패 시 재시도 허용
+    },
+  );
+}
 
 // LeetCode 에 직접 물어봐서 이 문제를 최근에 Accepted 했는지 확인 (제출 결과 페이지/새로고침 대응).
 async function isAcceptedRecently(slug) {
@@ -174,6 +208,7 @@ setInterval(() => {
   if (location.pathname !== lastPath) {
     lastPath = location.pathname;
     lastAccepted = null;
+    autoUploadedFor = null;
   }
   mountButton();
 }, 1500);

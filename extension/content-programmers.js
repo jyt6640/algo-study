@@ -48,13 +48,45 @@ function looksPassed() {
   return false;
 }
 
+let autoUploadedFor = null; // 자동 업로드 중복 방지 (lessonId)
+
 function markPassed() {
-  lastPassed = { lessonId: currentLesson(), at: new Date().toISOString() };
+  const lesson = currentLesson();
+  lastPassed = { lessonId: lesson, at: new Date().toISOString() };
   const btn = document.getElementById("algostudy-btn");
   if (btn) {
-    btn.textContent = "✅ 통과 — 업로드";
+    btn.textContent = "✅ 통과 — 업로드됨";
     btn.style.background = "#22c55e";
   }
+  if (lesson && autoUploadedFor !== lesson) autoUpload(lesson);
+}
+
+// 통과 감지되면 버튼 없이 자동으로 코드까지 업로드 (설정 안 됐으면 조용히 스킵)
+async function autoUpload(lesson) {
+  autoUploadedFor = lesson;
+  const cfg = await chrome.storage.local.get(["apiBase", "token"]);
+  if (!cfg.apiBase || !cfg.token) {
+    autoUploadedFor = null;
+    return;
+  }
+  const { code, language } = await captureCode();
+  chrome.runtime.sendMessage(
+    {
+      type: "ALGOSTUDY_INGEST",
+      payload: {
+        platform: "PROGRAMMERS",
+        problemSlug: lesson,
+        problemTitle: problemTitle(),
+        language,
+        code,
+        acceptedAt: (lastPassed && lastPassed.at) || new Date().toISOString(),
+      },
+    },
+    (res) => {
+      if (res?.ok) toast(res.isNew ? "자동 업로드 ✓" : "코드 업데이트 ✓");
+      else if (res?.error) autoUploadedFor = null;
+    },
+  );
 }
 
 const passObserver = new MutationObserver(() => {
@@ -152,6 +184,7 @@ setInterval(() => {
   if (location.pathname !== lastPath) {
     lastPath = location.pathname;
     lastPassed = null;
+    autoUploadedFor = null;
   }
   mountButton();
 }, 1500);
