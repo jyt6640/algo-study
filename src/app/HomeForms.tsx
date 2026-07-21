@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const card = "rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6";
-const input =
-  "w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500";
-const label = "mb-1 block text-xs font-medium text-neutral-400";
-const btn =
-  "rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-emerald-400 disabled:opacity-50";
+const card = "card p-6";
+const input = "input";
+const label = "field-label";
+const btn = "btn btn-primary w-full";
 
 export function HomeForms() {
   const router = useRouter();
@@ -64,8 +62,12 @@ export function HomeForms() {
   }
 
   return (
-    <>
-      {err && <p className="rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">{err}</p>}
+    <div className="grid gap-5">
+      {err && (
+        <p className="rounded-xl px-4 py-2 text-sm" style={{ background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)" }}>
+          {err}
+        </p>
+      )}
 
       <form action={createGroup} className={card}>
         <h2 className="mb-4 text-lg font-semibold">스터디 만들기</h2>
@@ -123,6 +125,6 @@ export function HomeForms() {
           참여하기
         </button>
       </form>
-    </>
+    </div>
   );
 }

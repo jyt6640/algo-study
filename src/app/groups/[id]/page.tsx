@@ -72,91 +72,101 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   const hoursLeft = Math.max(0, Math.floor((msLeft % 86400000) / 3600000));
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <div className="flex items-start justify-between">
+    <main className="mx-auto max-w-2xl px-6 py-14">
+      <div className="rise flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{group.name}</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            이번 주 ({weekOf} 시작) · 마감까지 <b className="text-neutral-200">{daysLeft}일 {hoursLeft}시간</b>
+          <h1 className="text-3xl font-semibold tracking-tight">{group.name}</h1>
+          <p className="mt-2 text-sm text-secondary">
+            이번 주 ({weekOf} 시작) · 마감까지{" "}
+            <b style={{ color: "var(--text)" }}>
+              {daysLeft}일 {hoursLeft}시간
+            </b>
+          </p>
+          <p className="mt-1 text-xs text-secondary">
+            목표 {group.quota}솔 · 벌금 {group.penaltyType === "FIXED" ? "미달 시" : "부족 문제당"}{" "}
+            {group.penaltyAmount.toLocaleString()}원
           </p>
         </div>
-        <div className="rounded-lg border border-neutral-800 px-3 py-2 text-right text-sm">
-          <div className="text-neutral-400">초대코드</div>
-          <div className="font-mono text-lg font-bold tracking-widest text-emerald-400">{group.inviteCode}</div>
+        <div className="card px-4 py-3 text-right">
+          <div className="text-xs text-secondary">초대코드</div>
+          <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-neutral-500">
-        목표 {group.quota}솔 · 벌금 {group.penaltyType === "FIXED" ? "미달 시" : "부족 문제당"}{" "}
-        {group.penaltyAmount.toLocaleString()}원
-      </p>
-
-      <div className="mt-8 space-y-3">
-        {rows.map((r) => (
-          <div key={r.userId} className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
-            <div className="flex items-center justify-between">
-              <Link
-                href={`/groups/${groupId}/members/${r.userId}`}
-                className="font-semibold hover:text-emerald-400"
-              >
-                {r.nickname}
-                {r.role === "OWNER" && <span className="ml-2 text-xs text-emerald-400">방장</span>}
-                <span className="ml-2 text-xs text-neutral-500">문제 보기 →</span>
-              </Link>
-              <div className="text-sm">
-                {r.solved >= group.quota ? (
-                  <span className="text-emerald-400">달성 ✓</span>
-                ) : (
-                  <span className="text-amber-400">예상 벌금 {r.projectedPenalty.toLocaleString()}원</span>
-                )}
+      <div className="mt-10 space-y-3">
+        {rows.map((r) => {
+          const met = r.solved >= group.quota;
+          return (
+            <div key={r.userId} className="card p-5">
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  href={`/groups/${groupId}/members/${r.userId}`}
+                  className="group flex items-center gap-2 font-semibold"
+                >
+                  <span className="group-hover:underline">{r.nickname}</span>
+                  {r.role === "OWNER" && <span className="accent text-xs">방장</span>}
+                  <span className="text-xs text-secondary opacity-0 transition-opacity group-hover:opacity-100">
+                    문제 보기 →
+                  </span>
+                </Link>
+                <div className="text-sm font-medium">
+                  {met ? (
+                    <span style={{ color: "var(--success)" }}>✓ 달성</span>
+                  ) : (
+                    <span style={{ color: "var(--warning)" }}>
+                      예상 벌금 {r.projectedPenalty.toLocaleString()}원
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex flex-1 gap-1.5">
+                  {Array.from({ length: group.quota }).map((_, i) => (
+                    <span
+                      key={i}
+                      className="h-2.5 flex-1 rounded-full transition-colors"
+                      style={{ background: i < r.solved ? "var(--accent)" : "var(--border-strong)" }}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-medium tabular-nums text-secondary">
+                  {r.solved}/{group.quota}
+                </span>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-2">
-              <div className="flex gap-1">
-                {Array.from({ length: group.quota }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-4 w-4 rounded ${i < r.solved ? "bg-emerald-500" : "bg-neutral-700"}`}
-                  />
-                ))}
-              </div>
-              <span className="ml-2 text-sm tabular-nums text-neutral-300">
-                {r.solved}/{group.quota}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <section className="mt-12">
+      <section className="mt-14">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">벌금 장부</h2>
-          <span className="text-sm text-neutral-400">
-            누적 <b className="text-amber-400">{totalPenalty.toLocaleString()}원</b>
+          <h2 className="text-xl font-semibold">벌금 장부</h2>
+          <span className="text-sm text-secondary">
+            누적 <b style={{ color: "var(--warning)" }}>{totalPenalty.toLocaleString()}원</b>
           </span>
         </div>
         {ledgerByWeek.size === 0 ? (
-          <p className="mt-3 text-sm text-neutral-500">
+          <p className="mt-4 text-sm text-secondary">
             아직 마감된 주가 없어요. 매주 일요일 자정에 확정됩니다.
           </p>
         ) : (
-          <div className="mt-3 space-y-4">
+          <div className="mt-4 space-y-3">
             {[...ledgerByWeek.entries()].map(([week, entries]) => (
-              <div key={week} className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
-                <div className="mb-2 text-sm font-medium text-neutral-300">{week} 주</div>
-                <div className="space-y-1">
+              <div key={week} className="card p-5">
+                <div className="mb-3 text-sm font-semibold text-secondary">{week} 주</div>
+                <div className="space-y-2">
                   {entries.map((e, i) => (
                     <div key={i} className="flex justify-between text-sm">
-                      <span className="text-neutral-300">
+                      <span>
                         {e.nickname}{" "}
-                        <span className="text-neutral-500">
+                        <span className="text-secondary">
                           ({e.solvedCount}/{group.quota})
                         </span>
                       </span>
                       {e.metQuota ? (
-                        <span className="text-emerald-400">달성 ✓</span>
+                        <span style={{ color: "var(--success)" }}>✓ 달성</span>
                       ) : (
-                        <span className="text-amber-400">{e.penaltyAmount.toLocaleString()}원</span>
+                        <span style={{ color: "var(--warning)" }}>{e.penaltyAmount.toLocaleString()}원</span>
                       )}
                     </div>
                   ))}
@@ -165,7 +175,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             ))}
           </div>
         )}
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="mt-4 text-xs text-secondary">
           벌금은 장부 표기용입니다. 실제 정산은 그룹에서 오프라인으로 진행하세요.
         </p>
       </section>

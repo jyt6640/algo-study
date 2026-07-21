@@ -46,64 +46,77 @@ export default async function MemberPage({
   ).length;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href={`/groups/${groupId}`} className="text-sm text-neutral-400 hover:text-neutral-200">
+    <main className="rise mx-auto max-w-2xl px-6 py-14">
+      <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
         ← {group.name}
       </Link>
 
-      <h1 className="mt-3 text-2xl font-bold">{user.nickname}</h1>
-      <p className="mt-1 text-sm text-neutral-400">
+      <h1 className="mt-4 text-3xl font-semibold tracking-tight">{user.nickname}</h1>
+      <p className="mt-2 text-sm text-secondary">
         LeetCode:{" "}
         {user.leetcodeHandle ? (
           <a
             href={`https://leetcode.com/u/${user.leetcodeHandle}/`}
             target="_blank"
             rel="noreferrer"
-            className="text-emerald-400 hover:underline"
+            className="accent hover:underline"
           >
             @{user.leetcodeHandle}
           </a>
         ) : (
-          <span className="text-neutral-500">미연동</span>
+          <span className="text-secondary">미연동</span>
         )}
         {" · "}이번 주 {thisWeekCount}/{group.quota} · 누적 {solves.length}솔
       </p>
 
-      <h2 className="mt-8 text-lg font-semibold">푼 문제</h2>
+      <h2 className="mt-10 text-xl font-semibold">푼 문제</h2>
       {solves.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-500">
-          아직 수집된 풀이가 없어요. 폴링(핸들 연동) 또는 확장 업로드로 채워집니다.
+        <p className="mt-4 text-sm text-secondary">
+          아직 수집된 풀이가 없어요. 핸들 연동 또는 확장 업로드로 채워집니다.
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-neutral-800 rounded-2xl border border-neutral-800 bg-neutral-900/40">
+        <ul className="card mt-4 divide-y" style={{ borderColor: "var(--border)" }}>
           {solves.map((s) => {
             const inWeek = s.acceptedAt >= start && s.acceptedAt < end;
             const code = codeBySolve.get(s.id);
             return (
-              <li key={s.id} className="p-4">
+              <li key={s.id} className="p-5">
                 <div className="flex items-center justify-between gap-3">
                   <a
                     href={`https://leetcode.com/problems/${s.problemSlug}/`}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-medium hover:text-emerald-400"
+                    className="font-medium hover:underline"
                   >
                     {s.problemTitle ?? s.problemSlug}
                   </a>
-                  <div className="flex shrink-0 items-center gap-2 text-xs text-neutral-500">
+                  <div className="flex shrink-0 items-center gap-2 text-xs text-secondary">
                     {inWeek && (
-                      <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-emerald-400">이번 주</span>
+                      <span
+                        className="rounded-full px-2 py-0.5"
+                        style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}
+                      >
+                        이번 주
+                      </span>
                     )}
-                    <span className="rounded bg-neutral-800 px-1.5 py-0.5">{sourceLabel[s.source]}</span>
+                    <span
+                      className="rounded-full px-2 py-0.5"
+                      style={{ background: "var(--surface-2)" }}
+                    >
+                      {sourceLabel[s.source]}
+                    </span>
                     <span>{s.acceptedAt.toISOString().slice(0, 10)}</span>
                   </div>
                 </div>
                 {code && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-neutral-400 hover:text-neutral-200">
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-secondary hover:underline">
                       코드 보기 {code.language ? `(${code.language})` : ""}
                     </summary>
-                    <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-neutral-950 p-3 text-xs text-neutral-200">
+                    <pre
+                      className="mt-2 max-h-96 overflow-auto rounded-xl p-3 text-xs"
+                      style={{ background: "var(--surface-2)", fontFamily: "var(--mono)" }}
+                    >
                       <code>{code.code}</code>
                     </pre>
                   </details>

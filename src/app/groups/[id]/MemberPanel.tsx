@@ -10,9 +10,8 @@ type Profile = {
   totalSolved: number;
 };
 
-const card = "mt-6 rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5";
-const input =
-  "w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500";
+const card = "card mt-6 p-6";
+const input = "input";
 
 export function MemberPanel({ groupId }: { groupId: number }) {
   const [uid, setUid] = useState<string | null>(null);
@@ -25,7 +24,7 @@ export function MemberPanel({ groupId }: { groupId: number }) {
     return (
       <section className={card}>
         <h2 className="text-lg font-semibold">내 연동</h2>
-        <p className="mt-2 text-sm text-neutral-400">
+        <p className="mt-2 text-sm text-secondary">
           이 브라우저에서 그룹을 만들거나 참여한 뒤에 LeetCode 계정을 연동할 수 있어요.
         </p>
       </section>
@@ -109,12 +108,12 @@ function LeetCodeLink({ userId }: { userId: number }) {
   return (
     <section className={card}>
       <h2 className="text-lg font-semibold">LeetCode 연동</h2>
-      <p className="mt-1 text-sm text-neutral-400">
+      <p className="mt-1 text-sm text-secondary">
         LeetCode 아이디만 입력하면 자동으로 확인하고 연동해요. 확장 설치 없이도 풀이가 집계됩니다.
       </p>
 
       {linked && (
-        <p className="mt-3 text-sm text-emerald-400">
+        <p className="mt-3 text-sm" style={{ color: "var(--success)" }}>
           현재 연동됨: <b>@{linked}</b>
         </p>
       )}
@@ -132,10 +131,17 @@ function LeetCodeLink({ userId }: { userId: number }) {
       </div>
 
       <div className="mt-3 min-h-[52px]">
-        {state === "checking" && <p className="text-sm text-neutral-500">확인 중…</p>}
-        {state === "notfound" && <p className="text-sm text-red-400">그런 아이디가 없어요.</p>}
+        {state === "checking" && <p className="text-sm text-secondary">확인 중…</p>}
+        {state === "notfound" && (
+          <p className="text-sm" style={{ color: "var(--danger)" }}>
+            그런 아이디가 없어요.
+          </p>
+        )}
         {(state === "found" || state === "saving") && preview && (
-          <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950 p-3">
+          <div
+            className="flex items-center gap-3 rounded-xl p-3"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {preview.avatar && (
               <img src={preview.avatar} alt="" className="h-10 w-10 rounded-full" />
@@ -143,21 +149,19 @@ function LeetCodeLink({ userId }: { userId: number }) {
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">
                 @{preview.username}
-                {preview.realName ? <span className="text-neutral-400"> · {preview.realName}</span> : null}
+                {preview.realName ? <span className="text-secondary"> · {preview.realName}</span> : null}
               </div>
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-secondary">
                 {preview.totalSolved.toLocaleString()}솔 풀이
                 {preview.ranking ? ` · 랭킹 ${preview.ranking.toLocaleString()}` : ""}
               </div>
             </div>
             {isLinkedToCurrent ? (
-              <span className="shrink-0 text-sm text-emerald-400">연동됨 ✓</span>
+              <span className="shrink-0 text-sm" style={{ color: "var(--success)" }}>
+                연동됨 ✓
+              </span>
             ) : (
-              <button
-                onClick={save}
-                disabled={state === "saving"}
-                className="shrink-0 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-400 disabled:opacity-50"
-              >
+              <button onClick={save} disabled={state === "saving"} className="btn btn-primary shrink-0 !px-4 !py-1.5">
                 {state === "saving" ? "연동 중…" : "이 계정으로 연동"}
               </button>
             )}
@@ -202,17 +206,17 @@ function ExtensionLink({ userId }: { userId: number }) {
         className="flex w-full items-center justify-between text-left"
       >
         <h2 className="text-lg font-semibold">확장프로그램으로 코드까지 올리기 (선택)</h2>
-        <span className="text-neutral-500">{open ? "−" : "+"}</span>
+        <span className="text-secondary">{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="mt-3 space-y-3 text-sm text-neutral-400">
+        <div className="mt-3 space-y-3 text-sm text-secondary">
           <p>
-            핸들 연동만으로도 풀이 개수는 자동 집계돼요. <b className="text-neutral-200">실제 제출 코드까지</b>{" "}
+            핸들 연동만으로도 풀이 개수는 자동 집계돼요. <b style={{ color: "var(--text)" }}>실제 제출 코드까지</b>{" "}
             스터디에 남기고 싶으면 확장을 설치하세요.
           </p>
           <ol className="list-decimal space-y-1 pl-5">
             <li>
-              <code className="text-neutral-300">chrome://extensions</code> → 개발자 모드 → 압축해제된
+              <code className="text-secondary">chrome://extensions</code> → 개발자 모드 → 압축해제된
               확장 로드 → <code>extension/</code> 폴더
             </li>
             <li>확장 팝업에 아래 API 주소와 연동 토큰 입력</li>
@@ -220,11 +224,7 @@ function ExtensionLink({ userId }: { userId: number }) {
           </ol>
 
           {!token ? (
-            <button
-              onClick={issueToken}
-              disabled={busy}
-              className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
-            >
+            <button onClick={issueToken} disabled={busy} className="btn btn-secondary !px-4 !py-1.5">
               {busy ? "발급 중…" : "연동 토큰 발급"}
             </button>
           ) : (
@@ -252,19 +252,10 @@ function TokenField({
 }) {
   return (
     <div>
-      <div className="mb-1 text-xs text-neutral-500">{label}</div>
+      <div className="mb-1 text-xs text-secondary">{label}</div>
       <div className="flex gap-2">
-        <input
-          readOnly
-          value={value}
-          className={`w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm ${
-            mono ? "font-mono" : ""
-          }`}
-        />
-        <button
-          onClick={() => onCopy(value)}
-          className="shrink-0 rounded-lg border border-neutral-700 px-3 text-sm hover:bg-neutral-800"
-        >
+        <input readOnly value={value} className={`input ${mono ? "font-mono" : ""}`} />
+        <button onClick={() => onCopy(value)} className="btn btn-secondary shrink-0 !px-4 !py-2">
           복사
         </button>
       </div>
