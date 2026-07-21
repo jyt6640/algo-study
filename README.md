@@ -37,17 +37,20 @@ npm run dev               # http://localhost:3000
 | POST | `/api/groups/join` | 초대코드로 가입 |
 | POST | `/api/tokens` | 확장 연동 토큰 발급 (`{userId}`) |
 | POST | `/api/ingest` | 확장 push 수신 (`Authorization: Bearer <토큰>`) |
+| POST | `/api/link` | LeetCode 핸들 연동 (`Bearer` + `{handle}`) — 확장 로그인 감지가 호출 |
 | GET | `/api/cron/collect` | 폴링 수집 배치 (Cron) |
 | GET | `/api/cron/finalize` | 주간 마감·벌금 확정 배치 (Cron) |
-| — | `/groups/[id]` | 그룹 대시보드 (진행률·예상 벌금) |
+| — | `/groups/[id]` | 그룹 대시보드 (진행률·예상 벌금·벌금 장부) |
+| — | `/groups/[id]/members/[uid]` | 멤버가 푼 문제 목록 (LeetCode 링크 + 업로드 코드) |
 
 Cron 엔드포인트는 프로덕션에서 `Authorization: Bearer $CRON_SECRET` 필요.
 
 ## 확장프로그램 설치 (개발자 모드)
 
 1. Chrome → `chrome://extensions` → 개발자 모드 ON → **압축해제된 확장 프로그램 로드** → `extension/` 선택
-2. 확장 팝업에서 **API 주소**(예: `http://localhost:3000`)와 **연동 토큰**(`/api/tokens` 발급값) 입력·저장
-3. LeetCode 문제 페이지에서 Accepted 후 우측 하단 **📤 스터디 업로드** 클릭
+2. 확장 팝업에서 **API 주소**(예: `http://localhost:3000`)와 **연동 토큰**(대시보드 "내 연동 토큰 발급") 입력·저장
+3. 팝업의 **LeetCode 로그인 감지 & 연동** 클릭 → leetcode.com 로그인 세션에서 username 자동 감지·연동 (핸들 수기 입력 불필요)
+4. LeetCode 문제 페이지에서 Accepted 후 우측 하단 **📤 스터디 업로드** 클릭 (Accepted 감지 시 버튼이 초록으로 바뀜)
 
 > `manifest.json` 의 `host_permissions` 에 배포 도메인을 추가해야 프로덕션에서 push 가능.
 

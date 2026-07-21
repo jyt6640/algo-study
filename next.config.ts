@@ -5,15 +5,14 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   // 확장프로그램(chrome-extension://) 에서 /api/ingest 를 호출할 수 있도록 CORS 허용
   async headers() {
+    const cors = [
+      { key: "Access-Control-Allow-Origin", value: "*" },
+      { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
+      { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
+    ];
     return [
-      {
-        source: "/api/ingest",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-        ],
-      },
+      { source: "/api/ingest", headers: cors },
+      { source: "/api/link", headers: cors },
     ];
   },
 };

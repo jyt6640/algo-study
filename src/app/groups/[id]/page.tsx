@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
@@ -94,10 +95,14 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         {rows.map((r) => (
           <div key={r.userId} className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
             <div className="flex items-center justify-between">
-              <div className="font-semibold">
+              <Link
+                href={`/groups/${groupId}/members/${r.userId}`}
+                className="font-semibold hover:text-emerald-400"
+              >
                 {r.nickname}
                 {r.role === "OWNER" && <span className="ml-2 text-xs text-emerald-400">방장</span>}
-              </div>
+                <span className="ml-2 text-xs text-neutral-500">문제 보기 →</span>
+              </Link>
               <div className="text-sm">
                 {r.solved >= group.quota ? (
                   <span className="text-emerald-400">달성 ✓</span>
