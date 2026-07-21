@@ -10,3 +10,6 @@ next-env.d.ts
 .DS_Store
 drizzle/meta
 algo-study-extension.zip
+
+.playwright-mcp
+shot*.png
