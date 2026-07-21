@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "ext:package": "cd extension && rm -f ../algo-study-extension.zip && zip -r -X ../algo-study-extension.zip . -x '*.DS_Store' && cd .. && echo 'built algo-study-extension.zip'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

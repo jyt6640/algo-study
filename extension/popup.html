@@ -3,80 +3,157 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      :root {
+        --bg: #0b0d10;
+        --surface: #16181c;
+        --border: #26292e;
+        --text: #e8eaed;
+        --sub: #98989d;
+        --accent: #0a84ff;
+        --success: #30d158;
+        --warning: #ff9f0a;
+        --danger: #ff453a;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        width: 280px;
+        width: 340px;
         margin: 0;
         padding: 14px;
-        font-family: system-ui, "Apple SD Gothic Neo", sans-serif;
-        background: #0b0d10;
-        color: #e8eaed;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
       }
       h1 {
-        font-size: 14px;
-        margin: 0 0 10px;
+        font-size: 15px;
+        margin: 0 0 12px;
+        letter-spacing: -0.02em;
+      }
+      h1 .b {
+        color: var(--accent);
+      }
+      .sub {
+        color: var(--sub);
+        font-size: 11px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        padding: 4px 0;
+      }
+      .bar {
+        display: flex;
+        gap: 3px;
+        margin-top: 6px;
+      }
+      .seg {
+        height: 6px;
+        flex: 1;
+        border-radius: 3px;
+        background: #33363b;
+      }
+      .seg.on {
+        background: var(--accent);
+      }
+      a {
+        color: var(--text);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
       }
       label {
         font-size: 11px;
-        color: #9ca3af;
+        color: var(--sub);
         display: block;
         margin: 8px 0 3px;
       }
       input {
         width: 100%;
-        box-sizing: border-box;
         padding: 7px 8px;
         border-radius: 8px;
-        border: 1px solid #374151;
+        border: 1px solid var(--border);
         background: #030712;
-        color: #e8eaed;
+        color: var(--text);
         font-size: 12px;
       }
       button {
-        margin-top: 12px;
-        width: 100%;
-        padding: 8px;
         border: none;
         border-radius: 8px;
-        background: #10b981;
-        color: #052e1a;
-        font-weight: 700;
+        padding: 8px 10px;
+        font-weight: 600;
+        font-size: 12px;
         cursor: pointer;
       }
-      .hint {
-        margin-top: 8px;
-        font-size: 10px;
-        color: #6b7280;
-        line-height: 1.4;
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        width: 100%;
+        margin-top: 10px;
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--sub);
+        border: 1px solid var(--border);
+      }
+      details > summary {
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--sub);
+        list-style: none;
+      }
+      details > summary::-webkit-details-marker {
+        display: none;
       }
       .ok {
-        color: #34d399;
         font-size: 11px;
-        margin-top: 8px;
         min-height: 14px;
+        margin-top: 6px;
+      }
+      .muted {
+        color: var(--sub);
+        font-size: 12px;
       }
     </style>
   </head>
   <body>
-    <h1>7일 7솔 연동 설정</h1>
-    <label>API 주소</label>
-    <input id="apiBase" placeholder="http://localhost:3000" />
-    <label>연동 토큰</label>
-    <input id="token" placeholder="웹앱에서 발급받은 토큰" />
-    <button id="save">저장</button>
-    <div class="ok" id="status"></div>
+    <h1>7일 <span class="b">7솔</span></h1>
 
-    <hr style="border-color: #1f2937; margin: 14px 0" />
-    <button id="link" style="background: #6366f1; color: #fff">LeetCode 로그인 감지 & 연동</button>
-    <div class="ok" id="linkStatus"></div>
-    <p class="hint">
-      leetcode.com 에 로그인돼 있으면, 위 버튼이 현재 로그인한 계정을 자동으로 감지해 연동합니다. (핸들을
-      직접 입력할 필요 없음)
+    <!-- 내 현황 (토큰 설정 시 표시) -->
+    <div id="dash"></div>
+
+    <!-- 설정 -->
+    <details id="settingsBox">
+      <summary>⚙️ 연동 설정</summary>
+      <div class="card" style="margin-top: 8px">
+        <label>API 주소</label>
+        <input id="apiBase" placeholder="https://algo-study-eight.vercel.app" />
+        <label>연동 토큰 (웹 → 스터디 → 확장 연동)</label>
+        <input id="token" placeholder="토큰 붙여넣기" />
+        <button class="btn-primary" id="save">저장</button>
+        <div class="ok" id="status"></div>
+        <button class="btn-ghost" id="link" style="width: 100%; margin-top: 8px">
+          LeetCode 로그인 감지 & 연동
+        </button>
+        <div class="ok" id="linkStatus"></div>
+      </div>
+    </details>
+
+    <p class="sub" style="margin-top: 10px">
+      LeetCode 문제 페이지에서 Accepted 후 우측 하단 「📤 스터디 업로드」로 코드까지 남길 수 있어요.
     </p>
 
-    <hr style="border-color: #1f2937; margin: 14px 0" />
-    <p class="hint">
-      LeetCode 문제 페이지에서 Accepted 후 우측 하단 "📤 스터디 업로드" 버튼을 누르면 코드가 전송됩니다.
-    </p>
     <script src="popup.js"></script>
   </body>
 </html>
