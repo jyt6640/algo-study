@@ -32,6 +32,7 @@ export function HomeForms() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "생성 실패");
+      localStorage.setItem(`algostudy_uid_${data.group.id}`, String(data.userId));
       router.push(`/groups/${data.group.id}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "오류");
@@ -54,6 +55,7 @@ export function HomeForms() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "가입 실패");
+      localStorage.setItem(`algostudy_uid_${data.groupId}`, String(data.userId));
       router.push(`/groups/${data.groupId}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "오류");
