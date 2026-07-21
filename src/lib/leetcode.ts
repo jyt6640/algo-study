@@ -77,6 +77,86 @@ export async function fetchUserProfile(username: string): Promise<LeetCodeProfil
   };
 }
 
+export interface LeetCodeFullProfile {
+  username: string;
+  realName: string | null;
+  avatar: string | null;
+  ranking: number | null;
+  solved: { all: number; easy: number; medium: number; hard: number };
+  streak: number;
+  totalActiveDays: number;
+  /** unix초(UTC 자정) -> 그 날의 제출 수. GitHub 잔디의 데이터 소스. */
+  calendar: Record<string, number>;
+}
+
+const FULL_QUERY = `
+query userFull($username: String!, $y1: Int!, $y2: Int!) {
+  matchedUser(username: $username) {
+    username
+    profile { realName userAvatar ranking }
+    submitStatsGlobal { acSubmissionNum { difficulty count } }
+    cur: userCalendar(year: $y1) { streak totalActiveDays submissionCalendar }
+    prev: userCalendar(year: $y2) { submissionCalendar }
+  }
+}`;
+
+/** 프로필 + 최근 2년 제출 캘린더(잔디용)를 한 번에 조회. 없으면 null. */
+export async function fetchFullProfile(username: string): Promise<LeetCodeFullProfile | null> {
+  const now = new Date();
+  const y1 = now.getUTCFullYear();
+  const res = await fetch(LEETCODE_GQL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      Referer: `https://leetcode.com/u/${encodeURIComponent(username)}/`,
+    },
+    body: JSON.stringify({ query: FULL_QUERY, variables: { username, y1, y2: y1 - 1 } }),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`LeetCode GQL ${res.status}`);
+
+  const json = (await res.json()) as {
+    data?: {
+      matchedUser?: {
+        username: string;
+        profile?: { realName?: string; userAvatar?: string; ranking?: number };
+        submitStatsGlobal?: { acSubmissionNum?: Array<{ difficulty: string; count: number }> };
+        cur?: { streak?: number; totalActiveDays?: number; submissionCalendar?: string } | null;
+        prev?: { submissionCalendar?: string } | null;
+      } | null;
+    };
+  };
+
+  const u = json.data?.matchedUser;
+  if (!u) return null;
+
+  const num = (d: string) =>
+    u.submitStatsGlobal?.acSubmissionNum?.find((x) => x.difficulty === d)?.count ?? 0;
+
+  const parse = (s?: string): Record<string, number> => {
+    if (!s) return {};
+    try {
+      return JSON.parse(s) as Record<string, number>;
+    } catch {
+      return {};
+    }
+  };
+  const calendar = { ...parse(u.prev?.submissionCalendar), ...parse(u.cur?.submissionCalendar) };
+
+  return {
+    username: u.username,
+    realName: u.profile?.realName || null,
+    avatar: u.profile?.userAvatar || null,
+    ranking: u.profile?.ranking ?? null,
+    solved: { all: num("All"), easy: num("Easy"), medium: num("Medium"), hard: num("Hard") },
+    streak: u.cur?.streak ?? 0,
+    totalActiveDays: u.cur?.totalActiveDays ?? 0,
+    calendar,
+  };
+}
+
 export async function fetchRecentAcSubmissions(
   username: string,
   limit = 20,
