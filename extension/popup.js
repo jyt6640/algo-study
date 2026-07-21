@@ -134,4 +134,62 @@ $("link").addEventListener("click", async () => {
   }
 });
 
+// 프로그래머스 "내가 푼 문제" 목록을 페이지별로 긁어 일괄 업로드
+$("importPg").addEventListener("click", async () => {
+  const apiBase = $("apiBase").value.trim();
+  const token = $("token").value.trim();
+  const set = $("importStatus");
+  set.style.color = "var(--success)";
+  if (!apiBase || !token) {
+    set.style.color = "var(--danger)";
+    set.textContent = "API 주소와 토큰을 먼저 저장하세요.";
+    return;
+  }
+  const levelLabel = { 0: "Lv.0", 1: "Lv.1", 2: "Lv.2", 3: "Lv.3", 4: "Lv.4", 5: "Lv.5" };
+  try {
+    const problems = [];
+    let totalPages = 1;
+    for (let page = 1; page <= totalPages && page <= 100; page++) {
+      set.textContent = `푼 문제 수집 중… ${problems.length}개`;
+      const res = await fetch(
+        `https://school.programmers.co.kr/api/v2/school/challenges/?perPage=30&statuses%5B%5D=solved&order=recent&search=&page=${page}`,
+        { credentials: "include", headers: { Accept: "application/json" } },
+      );
+      if (!res.ok) break;
+      const j = await res.json();
+      totalPages = j.totalPages || 1;
+      for (const it of j.result || []) {
+        if (!it?.id) continue;
+        problems.push({
+          slug: String(it.id),
+          title: (it.title || "").slice(0, 120),
+          acceptedAt: it.finishedAt || undefined,
+          difficulty: levelLabel[it.level] || undefined,
+        });
+      }
+    }
+
+    if (problems.length === 0) {
+      set.style.color = "var(--danger)";
+      set.textContent = "가져올 문제가 없어요. programmers.co.kr 에 로그인돼 있나요?";
+      return;
+    }
+
+    set.textContent = `${problems.length}개 업로드 중…`;
+    const res = await fetch(`${apiBase.replace(/\/$/, "")}/api/ingest/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ platform: "PROGRAMMERS", problems }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    set.style.color = "var(--success)";
+    set.textContent = `완료 ✓ 총 ${out.received}개 중 ${out.inserted}개 새로 반영`;
+    if (token && apiBase) loadDashboard(apiBase, token);
+  } catch (e) {
+    set.style.color = "var(--danger)";
+    set.textContent = "실패: " + (e instanceof Error ? e.message : String(e));
+  }
+});
+
 init();

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/db";
 import { fetchFullProfile } from "@/lib/leetcode";
-import { solvesToPlatformCalendar } from "@/lib/format";
+import { combineHeatmap } from "@/lib/format";
 import { ProfileCard } from "@/components/ProfileCard";
 import { Heatmap } from "@/components/Heatmap";
 import { PlatformLink } from "@/components/PlatformLink";
@@ -34,9 +34,10 @@ export default async function MyProfile() {
     .select({ acceptedAt: schema.solveLogs.acceptedAt, platform: schema.solveLogs.platform })
     .from(schema.solveLogs)
     .where(eq(schema.solveLogs.userId, userId));
-  const { total: combinedCal, breakdown: combinedBreak } = solvesToPlatformCalendar(allSolves, user.timezone);
-  const lcCount = allSolves.filter((s) => s.platform === "LEETCODE").length;
-  const pgCount = allSolves.filter((s) => s.platform === "PROGRAMMERS").length;
+  const pgDates = allSolves.filter((s) => s.platform === "PROGRAMMERS").map((s) => s.acceptedAt);
+  const { total: combinedCal, breakdown: combinedBreak } = combineHeatmap(profile?.calendar, pgDates, user.timezone);
+  const lcCount = profile?.solved.all ?? allSolves.filter((s) => s.platform === "LEETCODE").length;
+  const pgCount = pgDates.length;
 
   const linked = Boolean(user.leetcodeHandle || user.programmersHandle);
 

@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     ];
     return [
       { source: "/api/ingest", headers: cors },
+      { source: "/api/ingest/bulk", headers: cors },
       { source: "/api/link", headers: cors },
       { source: "/api/me", headers: cors },
     ];

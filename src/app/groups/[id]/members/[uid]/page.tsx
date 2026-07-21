@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
-import { fmtDateTime, solvesToPlatformCalendar } from "@/lib/format";
+import { fmtDateTime, combineHeatmap } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
 import { fetchFullProfile } from "@/lib/leetcode";
 import { ProfileCard } from "@/components/ProfileCard";
@@ -49,10 +49,15 @@ export default async function MemberPage({
     ? await fetchFullProfile(user.leetcodeHandle).catch(() => null)
     : null;
 
-  // 통합 잔디: 우리가 수집한 풀이(LeetCode 폴링 + 확장, 프로그래머스 확장)를 한 잔디로.
-  const { total: combinedCal, breakdown: combinedBreak } = solvesToPlatformCalendar(solves, group.timezone);
-  const lcCount = solves.filter((s) => s.platform === "LEETCODE").length;
-  const pgCount = solves.filter((s) => s.platform === "PROGRAMMERS").length;
+  // 통합 잔디: LeetCode 는 전체 캘린더(전 기록), 프로그래머스는 수집한 풀이.
+  const pgDates = solves.filter((s) => s.platform === "PROGRAMMERS").map((s) => s.acceptedAt);
+  const { total: combinedCal, breakdown: combinedBreak } = combineHeatmap(
+    profile?.calendar,
+    pgDates,
+    group.timezone,
+  );
+  const lcCount = profile?.solved.all ?? solves.filter((s) => s.platform === "LEETCODE").length;
+  const pgCount = pgDates.length;
 
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
