@@ -58,11 +58,13 @@ export default async function Home() {
           7일 <span className="accent">7솔</span>
         </h1>
         <div className="flex items-center gap-3">
-          {session.user.image && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={session.user.image} alt="" className="h-8 w-8 rounded-full" />
-          )}
-          <span className="text-sm text-secondary">{session.user.name}</span>
+          <Link href="/me" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 hover:bg-[var(--surface-2)]">
+            {session.user.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={session.user.image} alt="" className="h-8 w-8 rounded-full" />
+            )}
+            <span className="text-sm font-medium">{session.user.name}</span>
+          </Link>
           <form
             action={async () => {
               "use server";

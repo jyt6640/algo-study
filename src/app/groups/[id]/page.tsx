@@ -105,6 +105,9 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
           </div>
           <div className="flex gap-3 text-sm">
+            <Link href="/me" className="text-secondary hover:underline">
+              내 프로필
+            </Link>
             <Link href="/" className="text-secondary hover:underline">
               내 스터디
             </Link>
