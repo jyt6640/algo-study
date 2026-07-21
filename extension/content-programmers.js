@@ -35,17 +35,32 @@ function captureCode() {
   });
 }
 
-window.addEventListener("message", (ev) => {
-  if (ev.source !== window || ev.data?.type !== "ALGOSTUDY_PG_RESULT") return;
-  if (ev.data.passed) {
-    lastPassed = { lessonId: currentLesson(), at: new Date().toISOString() };
-    const btn = document.getElementById("algostudy-btn");
-    if (btn) {
-      btn.textContent = "✅ 통과 — 업로드";
-      btn.style.background = "#22c55e";
-    }
+// 채점 통과를 DOM 으로 감지 (프로그래머스는 WebSocket 채점이라 네트워크로는 안 잡힘).
+// 신호: "정답입니다!" 모달 또는 결과 콘솔의 "합계: X / X" 만점.
+function looksPassed() {
+  for (const t of document.querySelectorAll(".modal-title")) {
+    if (t.textContent.trim() === "정답입니다!") return true;
   }
+  for (const m of document.querySelectorAll(".console-message")) {
+    const mm = m.textContent.match(/합계\s*:\s*([\d.]+)\s*\/\s*([\d.]+)/);
+    if (mm && parseFloat(mm[2]) > 0 && parseFloat(mm[1]) >= parseFloat(mm[2])) return true;
+  }
+  return false;
+}
+
+function markPassed() {
+  lastPassed = { lessonId: currentLesson(), at: new Date().toISOString() };
+  const btn = document.getElementById("algostudy-btn");
+  if (btn) {
+    btn.textContent = "✅ 통과 — 업로드";
+    btn.style.background = "#22c55e";
+  }
+}
+
+const passObserver = new MutationObserver(() => {
+  if (looksPassed()) markPassed();
 });
+if (document.body) passObserver.observe(document.body, { childList: true, subtree: true });
 
 async function doUpload(btn) {
   const lessonId = currentLesson();

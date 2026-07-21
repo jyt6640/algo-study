@@ -1,8 +1,8 @@
 name: Publish extension
 
-# 확장을 Chrome Web Store 에 자동 업로드(선택적으로 게시).
-# - 수동: Actions 탭 → "Publish extension" → Run workflow (publish 체크 시 심사 제출까지)
-# - 자동: master 의 extension/ 변경 푸시 → 초안 업로드만(게시는 안 함)
+# 확장을 Chrome Web Store 에 업로드(선택적으로 게시).
+# Chrome Web Store API 승인 + Secrets 등록 전까지는 수동 실행 전용(자동 트리거 없음).
+# 수동: Actions 탭 → "Publish extension" → Run workflow (publish 체크 시 심사 제출까지)
 on:
   workflow_dispatch:
     inputs:
@@ -10,10 +10,6 @@ on:
         description: "업로드 후 심사 제출(게시)까지 할지"
         type: boolean
         default: true
-  push:
-    branches: [master]
-    paths:
-      - "extension/**"
 
 jobs:
   publish:
