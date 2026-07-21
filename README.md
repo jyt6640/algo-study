@@ -58,7 +58,7 @@ Cron 엔드포인트는 프로덕션에서 `Authorization: Bearer $CRON_SECRET` 
 
 1. GitHub 레포 연결 → Vercel import
 2. 환경변수 `DATABASE_URL`, `CRON_SECRET` 설정
-3. `vercel.json` 의 crons 자동 등록 — **시간당 폴링은 Pro 플랜 필요**(Hobby 는 하루 1회). Hobby 유지 시 Upstash QStash 로 대체.
+3. `vercel.json` 의 crons 자동 등록. **Hobby 플랜은 크론이 하루 1회로 제한**되므로 `collect` 는 매일 1회로 설정돼 있음. 시간당 폴링이 필요하면 **Pro 플랜**으로 `0 * * * *` 로 바꾸거나, Upstash QStash 같은 외부 스케줄러를 붙인다. (실시간성은 확장 push 가 보완)
 
 ## 알려진 한계 / PoC 필요
 
