@@ -22,6 +22,61 @@ query recentAcSubmissions($username: String!, $limit: Int!) {
   }
 }`;
 
+export interface LeetCodeProfile {
+  username: string;
+  realName: string | null;
+  avatar: string | null;
+  ranking: number | null;
+  totalSolved: number;
+}
+
+const PROFILE_QUERY = `
+query userProfile($username: String!) {
+  matchedUser(username: $username) {
+    username
+    profile { realName userAvatar ranking }
+    submitStatsGlobal { acSubmissionNum { difficulty count } }
+  }
+}`;
+
+/** 핸들이 실재하는 계정인지 확인하고 프로필 요약을 반환. 없으면 null. */
+export async function fetchUserProfile(username: string): Promise<LeetCodeProfile | null> {
+  const res = await fetch(LEETCODE_GQL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      Referer: `https://leetcode.com/u/${encodeURIComponent(username)}/`,
+    },
+    body: JSON.stringify({ query: PROFILE_QUERY, variables: { username } }),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`LeetCode GQL ${res.status}`);
+
+  const json = (await res.json()) as {
+    data?: {
+      matchedUser?: {
+        username: string;
+        profile?: { realName?: string; userAvatar?: string; ranking?: number };
+        submitStatsGlobal?: { acSubmissionNum?: Array<{ difficulty: string; count: number }> };
+      } | null;
+    };
+  };
+
+  const u = json.data?.matchedUser;
+  if (!u) return null;
+
+  const all = u.submitStatsGlobal?.acSubmissionNum?.find((x) => x.difficulty === "All");
+  return {
+    username: u.username,
+    realName: u.profile?.realName || null,
+    avatar: u.profile?.userAvatar || null,
+    ranking: u.profile?.ranking ?? null,
+    totalSolved: all?.count ?? 0,
+  };
+}
+
 export async function fetchRecentAcSubmissions(
   username: string,
   limit = 20,
