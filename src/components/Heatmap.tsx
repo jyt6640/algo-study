@@ -1,5 +1,9 @@
-// LeetCode 제출 캘린더를 GitHub 잔디처럼 렌더 (서버 컴포넌트, SVG).
+"use client";
+
+// LeetCode 제출 캘린더를 GitHub 잔디처럼 렌더. 셀에 마우스를 올리면 그 날 제출 수를 툴팁으로 표시.
 // calendar: unix초(UTC 자정) -> 그 날의 제출 수.
+
+import { useState } from "react";
 
 const DAY = 86400000;
 const CELL = 12;
@@ -16,17 +20,20 @@ function grassVar(count: number): string {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+type Hover = { x: number; y: number; label: string } | null;
+
 export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
+  const [hover, setHover] = useState<Hover>(null);
+
   const now = new Date();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const dow = new Date(todayUTC).getUTCDay(); // 0=일
+  const dow = new Date(todayUTC).getUTCDay();
   const sundayThisWeek = todayUTC - dow * DAY;
   const weeks = 53;
   const start = sundayThisWeek - (weeks - 1) * 7 * DAY;
 
   const topPad = 16;
-  const leftPad = 0;
-  const width = leftPad + weeks * STEP;
+  const width = weeks * STEP;
   const height = topPad + 7 * STEP;
 
   const cells: React.ReactNode[] = [];
@@ -41,27 +48,31 @@ export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
       const key = Math.floor(dayMs / 1000);
       const count = calendar[key] ?? 0;
       total += count;
+      const x = c * STEP;
+      const y = topPad + r * STEP;
+      const d = new Date(dayMs);
+      const label = `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · ${count > 0 ? `${count}회 제출` : "제출 없음"}`;
       cells.push(
         <rect
           key={`${c}-${r}`}
-          x={leftPad + c * STEP}
-          y={topPad + r * STEP}
+          x={x}
+          y={y}
           width={CELL}
           height={CELL}
           rx={2.5}
           fill={grassVar(count)}
-        >
-          <title>{`${new Date(dayMs).toISOString().slice(0, 10)}: ${count} submissions`}</title>
-        </rect>,
+          onMouseEnter={() => setHover({ x: x + CELL / 2, y, label })}
+          onMouseLeave={() => setHover(null)}
+          style={{ cursor: "pointer" }}
+        />,
       );
     }
-    // 그 주 첫 날(일요일)의 달이 바뀌면 상단에 월 라벨
     const firstOfCol = new Date(start + c * 7 * DAY);
     const m = firstOfCol.getUTCMonth();
     if (m !== lastMonth) {
       lastMonth = m;
       monthLabels.push(
-        <text key={`m-${c}`} x={leftPad + c * STEP} y={10} fontSize={9} fill="var(--text-secondary)">
+        <text key={`m-${c}`} x={c * STEP} y={10} fontSize={9} fill="var(--text-secondary)">
           {MONTHS[m]}
         </text>,
       );
@@ -70,11 +81,28 @@ export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
 
   return (
     <div>
-      <div className="overflow-x-auto pb-1">
-        <svg width={width} height={height} role="img" aria-label="LeetCode 제출 잔디">
-          {monthLabels}
-          {cells}
-        </svg>
+      <div className="overflow-x-auto" style={{ paddingBottom: 34 }}>
+        <div className="relative" style={{ width }}>
+          <svg width={width} height={height} role="img" aria-label="LeetCode 제출 잔디">
+            {monthLabels}
+            {cells}
+          </svg>
+          {hover && (
+            <div
+              className="pointer-events-none absolute z-10 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium"
+              style={{
+                left: Math.min(Math.max(hover.x, 44), width - 44),
+                top: hover.y + CELL + 6,
+                transform: "translate(-50%, 0)",
+                background: "var(--text)",
+                color: "var(--bg)",
+                boxShadow: "var(--shadow)",
+              }}
+            >
+              {hover.label}
+            </div>
+          )}
+        </div>
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-secondary">
         <span>최근 1년 {total.toLocaleString()}회 제출</span>

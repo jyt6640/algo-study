@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LeetCodeLink } from "@/components/LeetCodeLink";
 
+// 스터디 대시보드의 확장 연동 섹션. LeetCode 연동은 로그인 자동 연동 + /me 로 옮겼다.
 export function MemberPanel({ viewerId }: { groupId?: number; viewerId: number }) {
-  return (
-    <>
-      <LeetCodeLink />
-      <ExtensionLink userId={viewerId} />
-    </>
-  );
+  return <ExtensionLink userId={viewerId} />;
 }
 
 function ExtensionLink({ userId }: { userId: number }) {

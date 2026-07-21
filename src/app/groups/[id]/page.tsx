@@ -28,6 +28,15 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   const isOwner = viewerMembership?.role === "OWNER";
   const isMember = Boolean(viewerMembership);
 
+  const [viewer] = viewerId
+    ? await db
+        .select({ handle: schema.users.leetcodeHandle })
+        .from(schema.users)
+        .where(eq(schema.users.id, viewerId))
+        .limit(1)
+    : [];
+  const viewerLinked = Boolean(viewer?.handle);
+
   const { start, end, weekOf } = weekBounds(new Date(), group.timezone);
 
   const members = await db
@@ -217,7 +226,18 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
       </section>
 
       {isMember ? (
-        <MemberPanel groupId={groupId} viewerId={viewerId!} />
+        <>
+          {!viewerLinked && (
+            <Link
+              href="/me"
+              className="mt-10 block rounded-2xl border p-4 text-sm"
+              style={{ borderColor: "var(--border)", background: "color-mix(in srgb, var(--accent) 8%, transparent)" }}
+            >
+              LeetCode가 아직 연동되지 않았어요. <span className="accent font-medium">내 프로필에서 연동하기 →</span>
+            </Link>
+          )}
+          <MemberPanel groupId={groupId} viewerId={viewerId!} />
+        </>
       ) : (
         <section className="card mt-10 p-6 text-center">
           <p className="text-sm text-secondary">
