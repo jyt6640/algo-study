@@ -48,15 +48,53 @@ window.addEventListener("message", (ev) => {
   }
 });
 
+// LeetCode 에 직접 물어봐서 이 문제를 최근에 Accepted 했는지 확인 (제출 결과 페이지/새로고침 대응).
+async function isAcceptedRecently(slug) {
+  try {
+    const us = await fetch("https://leetcode.com/graphql", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "{ userStatus { username isSignedIn } }" }),
+    }).then((r) => r.json());
+    const username = us?.data?.userStatus?.username;
+    if (!username) return false;
+
+    const rec = await fetch("https://leetcode.com/graphql", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: "query r($u:String!){recentAcSubmissionList(username:$u,limit:20){titleSlug}}",
+        variables: { u: username },
+      }),
+    }).then((r) => r.json());
+    const list = rec?.data?.recentAcSubmissionList || [];
+    return list.some((s) => s.titleSlug === slug);
+  } catch {
+    return false;
+  }
+}
+
 async function doUpload(btn) {
   const slug = currentSlug();
   if (!slug) return toast("문제 페이지가 아닙니다", true);
 
-  const accepted = lastAccepted && lastAccepted.slug === slug;
-  if (!accepted && !confirm("이 문제의 Accepted 를 감지하지 못했어요. 그래도 업로드할까요?")) return;
-
-  btn.disabled = true;
   const prev = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "확인 중…";
+
+  // 1) 실시간 인터셉트로 잡혔거나, 2) LeetCode 에 직접 물어 최근 Accepted 인지 확인
+  let accepted = Boolean(lastAccepted && lastAccepted.slug === slug);
+  if (!accepted) accepted = await isAcceptedRecently(slug);
+
+  if (!accepted) {
+    btn.disabled = false;
+    btn.textContent = prev;
+    if (!confirm("이 문제의 Accepted 를 감지하지 못했어요. 그래도 업로드할까요?")) return;
+    btn.disabled = true;
+  }
+
   btn.textContent = "업로드 중…";
   const { code, language } = await captureCode();
 
