@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { fetchUserProfile } from "@/lib/leetcode";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -11,16 +12,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, account, profile }) {
       if (account && profile) {
         const githubId = String(profile.id);
-        const nickname = (profile.login as string) || (profile.name as string) || "user";
+        const login = (profile.login as string) || "";
+        const nickname = login || (profile.name as string) || "user";
 
         const existing = await db
-          .select({ id: schema.users.id })
+          .select({ id: schema.users.id, handle: schema.users.leetcodeHandle })
           .from(schema.users)
           .where(eq(schema.users.githubId, githubId))
           .limit(1);
 
+        let dbUserId: number;
+        let currentHandle: string | null = null;
+
         if (existing.length) {
-          token.dbUserId = existing[0].id;
+          dbUserId = existing[0].id;
+          currentHandle = existing[0].handle;
           await db
             .update(schema.users)
             .set({
@@ -28,7 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               image: (profile.avatar_url as string) ?? null,
               email: (profile.email as string) ?? null,
             })
-            .where(eq(schema.users.id, existing[0].id));
+            .where(eq(schema.users.id, dbUserId));
         } else {
           const [created] = await db
             .insert(schema.users)
@@ -40,7 +46,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: (profile.email as string) ?? null,
             })
             .returning({ id: schema.users.id });
-          token.dbUserId = created.id;
+          dbUserId = created.id;
+        }
+        token.dbUserId = dbUserId;
+
+        // 아직 LeetCode 미연동이면 GitHub 아이디로 자동 추측 연동 (같은 아이디가 많음).
+        // 틀리면 /me 에서 바꿀 수 있다.
+        if (!currentHandle && login) {
+          const guess = await fetchUserProfile(login).catch(() => null);
+          if (guess) {
+            await db
+              .update(schema.users)
+              .set({ leetcodeHandle: guess.username })
+              .where(eq(schema.users.id, dbUserId));
+          }
         }
       }
       return token;

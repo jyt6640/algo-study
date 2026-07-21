@@ -47,6 +47,12 @@ export default async function MyProfile() {
       {profile ? (
         <div className="mt-8">
           <ProfileCard profile={profile} />
+          <details className="mt-3">
+            <summary className="cursor-pointer text-sm text-secondary hover:underline">
+              다른 LeetCode 계정으로 변경
+            </summary>
+            <LeetCodeLink />
+          </details>
         </div>
       ) : (
         <LeetCodeLink />
