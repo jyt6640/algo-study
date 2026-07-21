@@ -3,7 +3,7 @@
 // LeetCode 제출 캘린더를 GitHub 잔디처럼 렌더. 셀에 마우스를 올리면 그 날 제출 수를 툴팁으로 표시.
 // calendar: unix초(UTC 자정) -> 그 날의 제출 수.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const DAY = 86400000;
 const CELL = 12;
@@ -24,6 +24,7 @@ type Hover = { x: number; y: number; label: string } | null;
 
 export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
   const [hover, setHover] = useState<Hover>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const now = new Date();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -48,22 +49,28 @@ export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
       const key = Math.floor(dayMs / 1000);
       const count = calendar[key] ?? 0;
       total += count;
-      const x = c * STEP;
-      const y = topPad + r * STEP;
+      const cx = c * STEP;
+      const cy = topPad + r * STEP;
       const d = new Date(dayMs);
       const label = `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · ${count > 0 ? `${count}회 제출` : "제출 없음"}`;
       cells.push(
         <rect
           key={`${c}-${r}`}
-          x={x}
-          y={y}
+          x={cx}
+          y={cy}
           width={CELL}
           height={CELL}
           rx={2.5}
           fill={grassVar(count)}
-          onMouseEnter={() => setHover({ x: x + CELL / 2, y, label })}
-          onMouseLeave={() => setHover(null)}
           style={{ cursor: "pointer" }}
+          onMouseEnter={() => {
+            const el = scrollRef.current;
+            const sl = el?.scrollLeft ?? 0;
+            const cw = el?.clientWidth ?? width;
+            const px = cx + CELL / 2 - sl; // 가로 스크롤 보정
+            setHover({ x: Math.min(Math.max(px, 46), cw - 46), y: cy, label });
+          }}
+          onMouseLeave={() => setHover(null)}
         />,
       );
     }
@@ -81,28 +88,29 @@ export function Heatmap({ calendar }: { calendar: Record<string, number> }) {
 
   return (
     <div>
-      <div className="overflow-x-auto" style={{ paddingBottom: 34 }}>
-        <div className="relative" style={{ width }}>
+      {/* 바깥 래퍼: overflow 없음 → 툴팁이 안 잘림 */}
+      <div className="relative" style={{ paddingTop: 26 }}>
+        <div ref={scrollRef} className="overflow-x-auto pb-1">
           <svg width={width} height={height} role="img" aria-label="LeetCode 제출 잔디">
             {monthLabels}
             {cells}
           </svg>
-          {hover && (
-            <div
-              className="pointer-events-none absolute z-10 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium"
-              style={{
-                left: Math.min(Math.max(hover.x, 44), width - 44),
-                top: hover.y + CELL + 6,
-                transform: "translate(-50%, 0)",
-                background: "var(--text)",
-                color: "var(--bg)",
-                boxShadow: "var(--shadow)",
-              }}
-            >
-              {hover.label}
-            </div>
-          )}
         </div>
+        {hover && (
+          <div
+            className="pointer-events-none absolute z-20 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium"
+            style={{
+              left: hover.x,
+              top: hover.y + 26, // 래퍼 paddingTop 만큼 보정 (셀 위에 표시)
+              transform: "translate(-50%, calc(-100% - 6px))",
+              background: "var(--text)",
+              color: "var(--bg)",
+              boxShadow: "var(--shadow)",
+            }}
+          >
+            {hover.label}
+          </div>
+        )}
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-secondary">
         <span>최근 1년 {total.toLocaleString()}회 제출</span>
