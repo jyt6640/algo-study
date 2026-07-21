@@ -1,0 +1,43 @@
+name: Publish extension
+
+# 확장을 Chrome Web Store 에 자동 업로드(선택적으로 게시).
+# - 수동: Actions 탭 → "Publish extension" → Run workflow (publish 체크 시 심사 제출까지)
+# - 자동: master 의 extension/ 변경 푸시 → 초안 업로드만(게시는 안 함)
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "업로드 후 심사 제출(게시)까지 할지"
+        type: boolean
+        default: true
+  push:
+    branches: [master]
+    paths:
+      - "extension/**"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show version
+        run: node -e "console.log('manifest version:', require('./extension/manifest.json').version)"
+
+      - name: Package extension zip
+        run: |
+          cd extension
+          zip -r -X ../algo-study-extension.zip . -x '*.DS_Store' -x '*.md'
+          cd ..
+          unzip -l algo-study-extension.zip
+
+      - name: Upload to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v5.0.0
+        with:
+          file-path: algo-study-extension.zip
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+          # push 로 자동 트리거되면 초안 업로드만, 수동 실행 시 입력값에 따라 게시
+          publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || false }}
