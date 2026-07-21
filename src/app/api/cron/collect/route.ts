@@ -30,12 +30,15 @@ export async function GET(req: NextRequest) {
           .insert(schema.solveLogs)
           .values({
             userId: u.id,
+            platform: "LEETCODE",
             problemSlug: s.problemSlug,
             problemTitle: s.problemTitle,
             acceptedAt: new Date(s.timestamp * 1000),
             source: "LEETCODE_GQL",
           })
-          .onConflictDoNothing({ target: [schema.solveLogs.userId, schema.solveLogs.problemSlug] })
+          .onConflictDoNothing({
+            target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
+          })
           .returning({ id: schema.solveLogs.id });
         if (res.length) inserted++;
       }

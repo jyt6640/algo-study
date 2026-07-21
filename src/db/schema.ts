@@ -13,6 +13,7 @@ import {
 export const roleEnum = pgEnum("role", ["OWNER", "MEMBER"]);
 export const penaltyTypeEnum = pgEnum("penalty_type", ["FIXED", "PER_MISSING"]);
 export const solveSourceEnum = pgEnum("solve_source", ["LEETCODE_GQL", "EXTENSION", "MANUAL"]);
+export const platformEnum = pgEnum("platform", ["LEETCODE", "PROGRAMMERS"]);
 
 export const users = pgTable(
   "users",
@@ -69,6 +70,7 @@ export const solveLogs = pgTable(
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    platform: platformEnum("platform").notNull().default("LEETCODE"),
     problemSlug: text("problem_slug").notNull(),
     problemTitle: text("problem_title"),
     difficulty: text("difficulty"),
@@ -77,8 +79,8 @@ export const solveLogs = pgTable(
     collectedAt: timestamp("collected_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    // 같은 유저의 같은 문제는 1솔(폴링/확장 이중 적재 방지)
-    uniqueIndex("solve_user_slug_uq").on(t.userId, t.problemSlug),
+    // 같은 유저의 같은 문제는 1솔 (플랫폼별로 구분)
+    uniqueIndex("solve_user_platform_slug_uq").on(t.userId, t.platform, t.problemSlug),
     index("solve_user_accepted_idx").on(t.userId, t.acceptedAt),
   ],
 );

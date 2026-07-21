@@ -4,16 +4,11 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
 import { fmtDateTime } from "@/lib/format";
+import { problemUrl, platformLabel } from "@/lib/platform";
 import { fetchFullProfile } from "@/lib/leetcode";
 import { ProfileCard } from "@/components/ProfileCard";
 
 export const dynamic = "force-dynamic";
-
-const sourceLabel: Record<string, string> = {
-  LEETCODE_GQL: "폴링",
-  EXTENSION: "확장",
-  MANUAL: "수동",
-};
 
 export default async function MemberPage({
   params,
@@ -97,7 +92,7 @@ export default async function MemberPage({
               <li key={s.id} className="p-5">
                 <div className="flex items-center justify-between gap-3">
                   <a
-                    href={`https://leetcode.com/problems/${s.problemSlug}/`}
+                    href={problemUrl(s.platform, s.problemSlug)}
                     target="_blank"
                     rel="noreferrer"
                     className="font-medium hover:underline"
@@ -117,7 +112,7 @@ export default async function MemberPage({
                       className="rounded-full px-2 py-0.5"
                       style={{ background: "var(--surface-2)" }}
                     >
-                      {sourceLabel[s.source]}
+                      {platformLabel[s.platform]}
                     </span>
                     <span>{fmtDateTime(s.acceptedAt, group.timezone)}</span>
                   </div>

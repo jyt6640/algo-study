@@ -31,19 +31,23 @@ export async function POST(req: NextRequest) {
   }
 
   const acceptedAt = body.acceptedAt ? new Date(body.acceptedAt) : new Date();
+  const platform: "LEETCODE" | "PROGRAMMERS" = body.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";
 
   // solveLog upsert: 신규면 삽입, 이미 있으면 기존 행을 재사용 (항상 id 확보)
   const inserted = await db
     .insert(schema.solveLogs)
     .values({
       userId: tok.userId,
+      platform,
       problemSlug: body.problemSlug,
       problemTitle: body.problemTitle ?? null,
       difficulty: body.difficulty ?? null,
       acceptedAt,
       source: "EXTENSION",
     })
-    .onConflictDoNothing({ target: [schema.solveLogs.userId, schema.solveLogs.problemSlug] })
+    .onConflictDoNothing({
+      target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
+    })
     .returning({ id: schema.solveLogs.id });
 
   let solveId = inserted[0]?.id;
@@ -52,7 +56,13 @@ export async function POST(req: NextRequest) {
     const [existing] = await db
       .select({ id: schema.solveLogs.id })
       .from(schema.solveLogs)
-      .where(and(eq(schema.solveLogs.userId, tok.userId), eq(schema.solveLogs.problemSlug, body.problemSlug)))
+      .where(
+        and(
+          eq(schema.solveLogs.userId, tok.userId),
+          eq(schema.solveLogs.platform, platform),
+          eq(schema.solveLogs.problemSlug, body.problemSlug),
+        ),
+      )
       .limit(1);
     solveId = existing?.id;
   }

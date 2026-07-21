@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { fmtDate, fmtTime } from "@/lib/format";
+import { problemUrl, platformLabel } from "@/lib/platform";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           userId: schema.solveLogs.userId,
           nickname: schema.users.nickname,
           image: schema.users.image,
+          platform: schema.solveLogs.platform,
           slug: schema.solveLogs.problemSlug,
           title: schema.solveLogs.problemTitle,
           difficulty: schema.solveLogs.difficulty,
@@ -99,13 +101,14 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
                           </Link>
                           <span className="text-secondary">·</span>
                           <a
-                            href={`https://leetcode.com/problems/${s.slug}/`}
+                            href={problemUrl(s.platform, s.slug)}
                             target="_blank"
                             rel="noreferrer"
                             className="truncate text-sm hover:underline"
                           >
                             {s.title ?? s.slug}
                           </a>
+                          <span className="shrink-0 text-xs text-secondary">· {platformLabel[s.platform]}</span>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <span className="text-xs text-secondary">{fmtTime(s.acceptedAt, group.timezone)}</span>

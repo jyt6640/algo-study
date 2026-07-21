@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { fmtDateTime } from "@/lib/format";
+import { problemUrl, platformLabel } from "@/lib/platform";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function SolvePage({
       userId: schema.solveLogs.userId,
       nickname: schema.users.nickname,
       image: schema.users.image,
+      platform: schema.solveLogs.platform,
       slug: schema.solveLogs.problemSlug,
       title: schema.solveLogs.problemTitle,
       difficulty: schema.solveLogs.difficulty,
@@ -54,12 +56,12 @@ export default async function SolvePage({
       <div className="mt-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{solve.title ?? solve.slug}</h1>
         <a
-          href={`https://leetcode.com/problems/${solve.slug}/`}
+          href={problemUrl(solve.platform, solve.slug)}
           target="_blank"
           rel="noreferrer"
           className="btn btn-secondary shrink-0 !px-4 !py-1.5 text-sm"
         >
-          LeetCode에서 열기
+          {platformLabel[solve.platform]}에서 열기
         </a>
       </div>
       <div className="mt-2 flex items-center gap-2 text-sm text-secondary">
