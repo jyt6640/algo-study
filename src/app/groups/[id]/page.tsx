@@ -6,6 +6,7 @@ import { weekBounds } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
+import { maybeRefreshLeetcode } from "@/lib/refresh";
 import { MemberPanel } from "./MemberPanel";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,9 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   if (!group) notFound();
 
   const viewerId = await currentUserId();
+  // 스터디 열면 내 LeetCode 최근 풀이를 자동 반영 (3분 쓰로틀, 실패해도 무시)
+  if (viewerId) await maybeRefreshLeetcode(viewerId).catch(() => {});
+
   const [viewerMembership] = viewerId
     ? await db
         .select({ role: schema.memberships.role })

@@ -26,6 +26,7 @@ export const users = pgTable(
     email: text("email"),
     leetcodeHandle: text("leetcode_handle"),
     programmersHandle: text("programmers_handle"),
+    leetcodeSyncedAt: timestamp("leetcode_synced_at", { withTimezone: true }),
     timezone: text("timezone").notNull().default("Asia/Seoul"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
