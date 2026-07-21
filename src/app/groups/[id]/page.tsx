@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
@@ -47,8 +47,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
 
   const rows = await Promise.all(
     members.map(async (m) => {
-      const [{ cnt }] = await db
-        .select({ cnt: sql<number>`count(distinct ${schema.solveLogs.problemSlug})::int` })
+      // 이번 주 푼 문제 목록 (slug 는 유저당 유일하므로 이미 distinct)
+      const weekSolves = await db
+        .select({
+          slug: schema.solveLogs.problemSlug,
+          title: schema.solveLogs.problemTitle,
+        })
         .from(schema.solveLogs)
         .where(
           and(
@@ -56,11 +60,13 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             gte(schema.solveLogs.acceptedAt, start),
             lt(schema.solveLogs.acceptedAt, end),
           ),
-        );
-      const solved = cnt ?? 0;
+        )
+        .orderBy(desc(schema.solveLogs.acceptedAt));
+      const solved = weekSolves.length;
       return {
         ...m,
         solved,
+        weekSolves,
         projectedPenalty: calcPenalty(group.penaltyType, group.penaltyAmount, group.quota, solved),
       };
     }),
@@ -172,6 +178,24 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
                   {r.solved}/{group.quota}
                 </span>
               </div>
+
+              {r.weekSolves.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {r.weekSolves.map((s) => (
+                    <a
+                      key={s.slug}
+                      href={`https://leetcode.com/problems/${s.slug}/`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full px-2.5 py-1 text-xs transition-colors hover:brightness-95"
+                      style={{ background: "var(--surface-2)", color: "var(--text)" }}
+                      title="LeetCode에서 문제 열기"
+                    >
+                      {s.title ?? s.slug}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
