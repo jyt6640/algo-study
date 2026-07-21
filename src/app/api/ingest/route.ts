@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
 
   const acceptedAt = body.acceptedAt ? new Date(body.acceptedAt) : new Date();
 
-  // slug 기준 dedup: 이미 있으면 재사용, 없으면 삽입
-  const [solve] = await db
+  // solveLog upsert: 신규면 삽입, 이미 있으면 기존 행을 재사용 (항상 id 확보)
+  const inserted = await db
     .insert(schema.solveLogs)
     .values({
       userId: tok.userId,
@@ -44,16 +44,35 @@ export async function POST(req: NextRequest) {
       source: "EXTENSION",
     })
     .onConflictDoNothing({ target: [schema.solveLogs.userId, schema.solveLogs.problemSlug] })
-    .returning();
+    .returning({ id: schema.solveLogs.id });
 
-  // 코드가 오면 Submission 에 저장 (신규 solve 인 경우에만 연결)
-  if (solve && body.code) {
-    await db.insert(schema.submissions).values({
-      solveLogId: solve.id,
-      language: body.language ?? null,
-      code: String(body.code),
-      submittedAt: acceptedAt,
-    });
+  let solveId = inserted[0]?.id;
+  const isNew = inserted.length > 0;
+  if (!solveId) {
+    const [existing] = await db
+      .select({ id: schema.solveLogs.id })
+      .from(schema.solveLogs)
+      .where(and(eq(schema.solveLogs.userId, tok.userId), eq(schema.solveLogs.problemSlug, body.problemSlug)))
+      .limit(1);
+    solveId = existing?.id;
+  }
+
+  // 코드가 오면 저장/갱신 (재업로드 시 최신 코드로 업데이트) — solveLog 당 1개
+  let codeSaved = false;
+  if (solveId && body.code) {
+    await db
+      .insert(schema.submissions)
+      .values({
+        solveLogId: solveId,
+        language: body.language ?? null,
+        code: String(body.code),
+        submittedAt: acceptedAt,
+      })
+      .onConflictDoUpdate({
+        target: schema.submissions.solveLogId,
+        set: { language: body.language ?? null, code: String(body.code), submittedAt: acceptedAt },
+      });
+    codeSaved = true;
   }
 
   await db
@@ -61,7 +80,7 @@ export async function POST(req: NextRequest) {
     .set({ lastUsedAt: new Date() })
     .where(eq(schema.extensionTokens.id, tok.id));
 
-  return NextResponse.json({ ok: true, deduped: !solve }, { status: 200 });
+  return NextResponse.json({ ok: true, isNew, codeSaved }, { status: 200 });
 }
 
 export async function OPTIONS() {

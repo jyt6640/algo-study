@@ -112,7 +112,7 @@ async function doUpload(btn) {
     (res) => {
       btn.disabled = false;
       btn.textContent = prev;
-      if (res?.ok) toast(res.deduped ? "이미 제출된 문제예요" : "업로드 완료 ✓");
+      if (res?.ok) toast(res.isNew ? "업로드 완료 ✓" : "코드 업데이트 완료 ✓");
       else toast(res?.error || "업로드 실패", true);
     },
   );

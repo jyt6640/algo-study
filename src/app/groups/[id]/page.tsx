@@ -50,6 +50,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
       // 이번 주 푼 문제 목록 (slug 는 유저당 유일하므로 이미 distinct)
       const weekSolves = await db
         .select({
+          id: schema.solveLogs.id,
           slug: schema.solveLogs.problemSlug,
           title: schema.solveLogs.problemTitle,
         })
@@ -182,17 +183,15 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
               {r.weekSolves.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {r.weekSolves.map((s) => (
-                    <a
-                      key={s.slug}
-                      href={`https://leetcode.com/problems/${s.slug}/`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <Link
+                      key={s.id}
+                      href={`/groups/${groupId}/solve/${s.id}`}
                       className="rounded-full px-2.5 py-1 text-xs transition-colors hover:brightness-95"
                       style={{ background: "var(--surface-2)", color: "var(--text)" }}
-                      title="LeetCode에서 문제 열기"
+                      title="정답 코드 보기"
                     >
                       {s.title ?? s.slug}
-                    </a>
+                    </Link>
                   ))}
                 </div>
               )}

@@ -83,17 +83,21 @@ export const solveLogs = pgTable(
   ],
 );
 
-// 확장 push 로 들어온 실제 코드 (선택 저장)
-export const submissions = pgTable("submissions", {
-  id: serial("id").primaryKey(),
-  solveLogId: integer("solve_log_id")
-    .notNull()
-    .references(() => solveLogs.id, { onDelete: "cascade" }),
-  language: text("language"),
-  code: text("code").notNull(),
-  submittedAt: timestamp("submitted_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+// 확장 push 로 들어온 실제 코드 (solveLog 당 1개, 재업로드 시 갱신)
+export const submissions = pgTable(
+  "submissions",
+  {
+    id: serial("id").primaryKey(),
+    solveLogId: integer("solve_log_id")
+      .notNull()
+      .references(() => solveLogs.id, { onDelete: "cascade" }),
+    language: text("language"),
+    code: text("code").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("submissions_solve_uq").on(t.solveLogId)],
+);
 
 // 확장 <-> 계정 연동 토큰 (해시 저장)
 export const extensionTokens = pgTable(
