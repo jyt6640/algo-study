@@ -14,13 +14,21 @@ export const roleEnum = pgEnum("role", ["OWNER", "MEMBER"]);
 export const penaltyTypeEnum = pgEnum("penalty_type", ["FIXED", "PER_MISSING"]);
 export const solveSourceEnum = pgEnum("solve_source", ["LEETCODE_GQL", "EXTENSION", "MANUAL"]);
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  nickname: text("nickname").notNull(),
-  leetcodeHandle: text("leetcode_handle"),
-  timezone: text("timezone").notNull().default("Asia/Seoul"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    githubId: text("github_id"), // GitHub OAuth 고유 id (로그인 사용자)
+    nickname: text("nickname").notNull(),
+    name: text("name"),
+    image: text("image"),
+    email: text("email"),
+    leetcodeHandle: text("leetcode_handle"),
+    timezone: text("timezone").notNull().default("Asia/Seoul"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("users_github_id_uq").on(t.githubId)],
+);
 
 export const groups = pgTable("groups", {
   id: serial("id").primaryKey(),
@@ -30,6 +38,10 @@ export const groups = pgTable("groups", {
   penaltyType: penaltyTypeEnum("penalty_type").notNull().default("FIXED"),
   penaltyAmount: integer("penalty_amount").notNull().default(10000),
   timezone: text("timezone").notNull().default("Asia/Seoul"),
+  // 벌금 정산 계좌 (방장이 등록, 멤버에게 표시. 실제 송금은 오프라인)
+  accountBank: text("account_bank"),
+  accountNumber: text("account_number"),
+  accountHolder: text("account_holder"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

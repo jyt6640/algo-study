@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
+import { currentUserId } from "@/lib/session";
 import { MemberPanel } from "./MemberPanel";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,17 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
 
   const [group] = await db.select().from(schema.groups).where(eq(schema.groups.id, groupId)).limit(1);
   if (!group) notFound();
+
+  const viewerId = await currentUserId();
+  const [viewerMembership] = viewerId
+    ? await db
+        .select({ role: schema.memberships.role })
+        .from(schema.memberships)
+        .where(and(eq(schema.memberships.userId, viewerId), eq(schema.memberships.groupId, groupId)))
+        .limit(1)
+    : [];
+  const isOwner = viewerMembership?.role === "OWNER";
+  const isMember = Boolean(viewerMembership);
 
   const { start, end, weekOf } = weekBounds(new Date(), group.timezone);
 
@@ -87,9 +99,21 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             {group.penaltyAmount.toLocaleString()}원
           </p>
         </div>
-        <div className="card px-4 py-3 text-right">
-          <div className="text-xs text-secondary">초대코드</div>
-          <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="card px-4 py-3 text-right">
+            <div className="text-xs text-secondary">초대코드</div>
+            <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
+          </div>
+          <div className="flex gap-3 text-sm">
+            <Link href="/" className="text-secondary hover:underline">
+              내 스터디
+            </Link>
+            {isOwner && (
+              <Link href={`/groups/${groupId}/settings`} className="accent hover:underline">
+                설정
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -175,12 +199,30 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             ))}
           </div>
         )}
+        {group.accountNumber ? (
+          <div className="mt-4 card p-4 text-sm">
+            <div className="text-xs text-secondary">정산 계좌</div>
+            <div className="mt-1 font-medium">
+              {group.accountBank} {group.accountNumber}
+              {group.accountHolder ? <span className="text-secondary"> · {group.accountHolder}</span> : null}
+            </div>
+          </div>
+        ) : null}
         <p className="mt-4 text-xs text-secondary">
-          벌금은 장부 표기용입니다. 실제 정산은 그룹에서 오프라인으로 진행하세요.
+          벌금은 장부 표기용입니다. 실제 정산은 위 계좌로 오프라인 송금하세요.
         </p>
       </section>
 
-      <MemberPanel groupId={groupId} />
+      {isMember ? (
+        <MemberPanel groupId={groupId} viewerId={viewerId!} />
+      ) : (
+        <section className="card mt-10 p-6 text-center">
+          <p className="text-sm text-secondary">
+            이 스터디의 멤버가 아니에요. 초대코드 <b className="accent">{group.inviteCode}</b> 로 참여하면
+            진행 상황을 함께 관리할 수 있어요.
+          </p>
+        </section>
+      )}
     </main>
   );
 }

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { fetchUserProfile } from "@/lib/leetcode";
+import { currentUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-// GET /api/handle?userId=1 — 현재 연동된 핸들 조회
-export async function GET(req: NextRequest) {
-  const userId = Number(req.nextUrl.searchParams.get("userId"));
-  if (!Number.isFinite(userId)) return NextResponse.json({ error: "userId 필요" }, { status: 400 });
+// GET — 로그인 사용자의 현재 연동 핸들
+export async function GET() {
+  const userId = await currentUserId();
+  if (!userId) return NextResponse.json({ handle: null });
   const [u] = await db
     .select({ handle: schema.users.leetcodeHandle })
     .from(schema.users)
@@ -17,16 +18,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ handle: u?.handle ?? null });
 }
 
-// POST /api/handle { userId, handle } — 핸들 검증 후 연동
+// POST { handle } — 실재 계정 검증 후 로그인 사용자에 연동
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  const userId = Number(body?.userId);
-  const handle = typeof body?.handle === "string" ? body.handle.trim() : "";
-  if (!Number.isFinite(userId) || !handle) {
-    return NextResponse.json({ error: "userId, handle 이 필요합니다." }, { status: 400 });
-  }
+  const userId = await currentUserId();
+  if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-  // 실재 계정인지 확인 후 저장
+  const body = await req.json().catch(() => null);
+  const handle = typeof body?.handle === "string" ? body.handle.trim() : "";
+  if (!handle) return NextResponse.json({ error: "handle 이 필요합니다." }, { status: 400 });
+
   const profile = await fetchUserProfile(handle).catch(() => null);
   if (!profile) {
     return NextResponse.json({ error: "존재하지 않는 LeetCode 계정입니다." }, { status: 404 });

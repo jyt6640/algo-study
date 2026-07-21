@@ -13,28 +13,11 @@ type Profile = {
 const card = "card mt-6 p-6";
 const input = "input";
 
-export function MemberPanel({ groupId }: { groupId: number }) {
-  const [uid, setUid] = useState<string | null>(null);
-
-  useEffect(() => {
-    setUid(localStorage.getItem(`algostudy_uid_${groupId}`));
-  }, [groupId]);
-
-  if (!uid) {
-    return (
-      <section className={card}>
-        <h2 className="text-lg font-semibold">내 연동</h2>
-        <p className="mt-2 text-sm text-secondary">
-          이 브라우저에서 그룹을 만들거나 참여한 뒤에 LeetCode 계정을 연동할 수 있어요.
-        </p>
-      </section>
-    );
-  }
-
+export function MemberPanel({ viewerId }: { groupId?: number; viewerId: number }) {
   return (
     <>
-      <LeetCodeLink userId={Number(uid)} />
-      <ExtensionLink userId={Number(uid)} />
+      <LeetCodeLink userId={viewerId} />
+      <ExtensionLink userId={viewerId} />
     </>
   );
 }

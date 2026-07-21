@@ -1,40 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { currentUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-// 초대코드로 그룹 가입 (유저 생성 + MEMBER 등록)
+// 초대코드로 그룹 가입 (로그인 사용자를 MEMBER 로 등록, 이미 멤버면 그대로 입장)
 export async function POST(req: NextRequest) {
+  const userId = await currentUserId();
+  if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+
   const body = await req.json().catch(() => null);
-  if (!body?.inviteCode || !body?.nickname) {
-    return NextResponse.json({ error: "inviteCode, nickname 이 필요합니다." }, { status: 400 });
+  if (!body?.inviteCode) {
+    return NextResponse.json({ error: "inviteCode 가 필요합니다." }, { status: 400 });
   }
 
   const [group] = await db
     .select()
     .from(schema.groups)
-    .where(eq(schema.groups.inviteCode, String(body.inviteCode).toUpperCase()))
+    .where(eq(schema.groups.inviteCode, String(body.inviteCode).toUpperCase().trim()))
     .limit(1);
-
   if (!group) {
     return NextResponse.json({ error: "존재하지 않는 초대코드입니다." }, { status: 404 });
   }
 
-  const [user] = await db
-    .insert(schema.users)
-    .values({
-      nickname: body.nickname,
-      leetcodeHandle: body.leetcodeHandle ?? null,
-      timezone: group.timezone,
-    })
-    .returning();
+  const existing = await db
+    .select({ id: schema.memberships.id })
+    .from(schema.memberships)
+    .where(and(eq(schema.memberships.userId, userId), eq(schema.memberships.groupId, group.id)))
+    .limit(1);
 
-  await db.insert(schema.memberships).values({
-    userId: user.id,
-    groupId: group.id,
-    role: "MEMBER",
-  });
+  if (existing.length === 0) {
+    await db.insert(schema.memberships).values({ userId, groupId: group.id, role: "MEMBER" });
+  }
 
-  return NextResponse.json({ groupId: group.id, userId: user.id }, { status: 201 });
+  return NextResponse.json({ groupId: group.id }, { status: 200 });
 }
