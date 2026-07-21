@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
+import { fmtDateTime } from "@/lib/format";
 import { MemberPanel } from "./MemberPanel";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
           id: schema.solveLogs.id,
           slug: schema.solveLogs.problemSlug,
           title: schema.solveLogs.problemTitle,
+          acceptedAt: schema.solveLogs.acceptedAt,
         })
         .from(schema.solveLogs)
         .where(
@@ -191,6 +193,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
                       title="정답 코드 보기"
                     >
                       {s.title ?? s.slug}
+                      <span className="ml-1.5 text-secondary">{fmtDateTime(s.acceptedAt, group.timezone)}</span>
                     </Link>
                   ))}
                 </div>

@@ -2,6 +2,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
+import { fmtDate, fmtTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -52,10 +53,10 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     : [];
   const codeBySolve = new Map(codes.map((c) => [c.solveLogId, c]));
 
-  // 날짜별 그룹
+  // 날짜별 그룹 (그룹 타임존 기준)
   const byDate = new Map<string, typeof solves>();
   for (const s of solves) {
-    const d = s.acceptedAt.toISOString().slice(0, 10);
+    const d = fmtDate(s.acceptedAt, group.timezone);
     if (!byDate.has(d)) byDate.set(d, []);
     byDate.get(d)!.push(s);
   }
@@ -106,12 +107,15 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
                             {s.title ?? s.slug}
                           </a>
                         </div>
-                        <span
-                          className="shrink-0 rounded-full px-2 py-0.5 text-xs"
-                          style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
-                        >
-                          {sourceLabel[s.source]}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-xs text-secondary">{fmtTime(s.acceptedAt, group.timezone)}</span>
+                          <span
+                            className="rounded-full px-2 py-0.5 text-xs"
+                            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
+                          >
+                            {sourceLabel[s.source]}
+                          </span>
+                        </div>
                       </div>
                       {code && (
                         <details className="mt-2">

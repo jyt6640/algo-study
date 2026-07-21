@@ -2,6 +2,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
+import { fmtDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,13 @@ export default async function SolvePage({
   const groupId = Number(id);
   const sid = Number(solveId);
   if (!Number.isFinite(groupId) || !Number.isFinite(sid)) notFound();
+
+  const [group] = await db
+    .select({ timezone: schema.groups.timezone })
+    .from(schema.groups)
+    .where(eq(schema.groups.id, groupId))
+    .limit(1);
+  const tz = group?.timezone ?? "Asia/Seoul";
 
   const [solve] = await db
     .select({
@@ -66,7 +74,7 @@ export default async function SolvePage({
           {solve.nickname}
         </Link>
         <span>·</span>
-        <span>{solve.acceptedAt.toISOString().slice(0, 10)}</span>
+        <span>{fmtDateTime(solve.acceptedAt, tz)} 해결</span>
         {solve.difficulty && (
           <>
             <span>·</span>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { weekBounds } from "@/lib/week";
+import { fmtDateTime } from "@/lib/format";
 import { fetchFullProfile } from "@/lib/leetcode";
 import { ProfileCard } from "@/components/ProfileCard";
 
@@ -118,7 +119,7 @@ export default async function MemberPage({
                     >
                       {sourceLabel[s.source]}
                     </span>
-                    <span>{s.acceptedAt.toISOString().slice(0, 10)}</span>
+                    <span>{fmtDateTime(s.acceptedAt, group.timezone)}</span>
                   </div>
                 </div>
                 {code && (
