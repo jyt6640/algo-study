@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { previousWeekBounds } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { isAuthorizedCron } from "@/lib/cronAuth";
+import { sendDiscord } from "@/lib/notify";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,11 +23,13 @@ export async function GET(req: NextRequest) {
     const { start, end, weekOf } = previousWeekBounds(now, group.timezone);
 
     const members = await db
-      .select({ userId: schema.memberships.userId })
+      .select({ userId: schema.memberships.userId, nickname: schema.users.nickname })
       .from(schema.memberships)
+      .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
       .where(eq(schema.memberships.groupId, group.id));
 
     let finalized = 0;
+    const summary: string[] = [];
     for (const m of members) {
       // 해당 주 기간 내 distinct slug 개수
       const [{ cnt }] = await db
@@ -59,6 +62,18 @@ export async function GET(req: NextRequest) {
           set: { solvedCount: solved, metQuota: met, penaltyAmount: penalty, finalizedAt: new Date() },
         });
       finalized++;
+      summary.push(
+        met
+          ? `✅ ${m.nickname} — ${solved}/${group.quota} 달성`
+          : `❌ ${m.nickname} — ${solved}/${group.quota} · 벌금 ${penalty.toLocaleString()}원`,
+      );
+    }
+
+    if (group.discordWebhook && summary.length) {
+      await sendDiscord(
+        group.discordWebhook,
+        `📊 **${group.name}** ${weekOf} 주 마감 결과\n${summary.join("\n")}`,
+      );
     }
 
     results.push({ groupId: group.id, weekOf, finalized });

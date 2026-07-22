@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isNotNull } from "drizzle-orm";
+import { and, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { fetchRecentAcSubmissions } from "@/lib/leetcode";
 import { isAuthorizedCron } from "@/lib/cronAuth";
+import { sendDiscord, isLastDayOfWeek } from "@/lib/notify";
+import { weekBounds } from "@/lib/week";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -47,5 +49,45 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, users: targets.length, inserted, errors });
+  // 마감 당일(일요일)이면, 웹훅이 있는 그룹에 진행 상황 리마인더 전송
+  let reminded = 0;
+  const now = new Date();
+  const groups = await db
+    .select()
+    .from(schema.groups)
+    .where(isNotNull(schema.groups.discordWebhook));
+  for (const g of groups) {
+    if (!g.discordWebhook || !isLastDayOfWeek(now, g.timezone)) continue;
+    const { start, end } = weekBounds(now, g.timezone);
+    const members = await db
+      .select({ nickname: schema.users.nickname, userId: schema.memberships.userId })
+      .from(schema.memberships)
+      .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
+      .where(eq(schema.memberships.groupId, g.id));
+
+    const behind: string[] = [];
+    for (const m of members) {
+      const [{ cnt }] = await db
+        .select({ cnt: sql<number>`count(distinct ${schema.solveLogs.problemSlug})::int` })
+        .from(schema.solveLogs)
+        .where(
+          and(
+            eq(schema.solveLogs.userId, m.userId),
+            gte(schema.solveLogs.acceptedAt, start),
+            lt(schema.solveLogs.acceptedAt, end),
+          ),
+        );
+      const solved = cnt ?? 0;
+      if (solved < g.quota) behind.push(`• ${m.nickname} — ${solved}/${g.quota} (${g.quota - solved}개 남음)`);
+    }
+    if (behind.length) {
+      await sendDiscord(
+        g.discordWebhook,
+        `⏰ **${g.name}** 오늘 자정 마감! 아직 목표 미달인 분들:\n${behind.join("\n")}`,
+      );
+      reminded++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, users: targets.length, inserted, reminded, errors });
 }
