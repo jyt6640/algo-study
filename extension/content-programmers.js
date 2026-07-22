@@ -79,8 +79,8 @@ function markPassed() {
 // 통과 감지되면 버튼 없이 자동으로 코드까지 업로드 (설정 안 됐으면 조용히 스킵)
 async function autoUpload(lesson) {
   autoUploadedFor = lesson;
-  const cfg = await chrome.storage.local.get(["apiBase", "token"]);
-  if (!cfg.apiBase || !cfg.token) {
+  const cfg = await chrome.storage.local.get(["token"]);
+  if (!cfg.token) {
     autoUploadedFor = null;
     return;
   }

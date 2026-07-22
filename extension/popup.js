@@ -1,17 +1,19 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// API 주소는 고정 — 사용자는 토큰만 입력한다.
+const API_BASE = "https://algo-study-eight.vercel.app";
+
 async function init() {
-  const { apiBase, token } = await chrome.storage.local.get(["apiBase", "token"]);
-  if (apiBase) $("apiBase").value = apiBase;
+  const { token } = await chrome.storage.local.get(["token"]);
   if (token) $("token").value = token;
 
-  if (apiBase && token) {
-    loadDashboard(apiBase, token);
+  if (token) {
+    loadDashboard(API_BASE, token);
   } else {
     // 설정 안 됐으면 설정 섹션을 펼쳐서 유도
     $("settingsBox").open = true;
-    $("dash").innerHTML = '<div class="card"><p class="muted">연동 설정을 먼저 저장하면 여기에 내 현황이 표시돼요.</p></div>';
+    $("dash").innerHTML = '<div class="card"><p class="muted">연동 토큰을 저장하면 여기에 내 현황이 표시돼요.</p></div>';
   }
 }
 
@@ -83,23 +85,22 @@ function renderDashboard(data) {
 }
 
 $("save").addEventListener("click", async () => {
-  const apiBase = $("apiBase").value.trim();
   const token = $("token").value.trim();
-  await chrome.storage.local.set({ apiBase, token });
+  await chrome.storage.local.set({ token, apiBase: API_BASE });
   $("status").textContent = "저장됐어요 ✓";
   $("status").style.color = "var(--success)";
-  if (apiBase && token) loadDashboard(apiBase, token);
+  if (token) loadDashboard(API_BASE, token);
   setTimeout(() => ($("status").textContent = ""), 1500);
 });
 
 $("link").addEventListener("click", async () => {
-  const apiBase = $("apiBase").value.trim();
+  const apiBase = API_BASE;
   const token = $("token").value.trim();
   const set = $("linkStatus");
   set.style.color = "var(--success)";
   if (!apiBase || !token) {
     set.style.color = "var(--danger)";
-    set.textContent = "API 주소와 토큰을 먼저 저장하세요.";
+    set.textContent = "연동 토큰을 먼저 저장하세요.";
     return;
   }
   try {
@@ -136,13 +137,13 @@ $("link").addEventListener("click", async () => {
 
 // 프로그래머스 "내가 푼 문제" 목록을 페이지별로 긁어 일괄 업로드
 $("importPg").addEventListener("click", async () => {
-  const apiBase = $("apiBase").value.trim();
+  const apiBase = API_BASE;
   const token = $("token").value.trim();
   const set = $("importStatus");
   set.style.color = "var(--success)";
   if (!apiBase || !token) {
     set.style.color = "var(--danger)";
-    set.textContent = "API 주소와 토큰을 먼저 저장하세요.";
+    set.textContent = "연동 토큰을 먼저 저장하세요.";
     return;
   }
   const levelLabel = { 0: "Lv.0", 1: "Lv.1", 2: "Lv.2", 3: "Lv.3", 4: "Lv.4", 5: "Lv.5" };
@@ -194,13 +195,13 @@ $("importPg").addEventListener("click", async () => {
 
 // LeetCode 세션으로 최근 Accepted 풀이의 실제 코드를 가져와 일괄 업로드
 $("importLc").addEventListener("click", async () => {
-  const apiBase = $("apiBase").value.trim();
+  const apiBase = API_BASE;
   const token = $("token").value.trim();
   const set = $("importLcStatus");
   set.style.color = "var(--success)";
   if (!apiBase || !token) {
     set.style.color = "var(--danger)";
-    set.textContent = "API 주소와 토큰을 먼저 저장하세요.";
+    set.textContent = "연동 토큰을 먼저 저장하세요.";
     return;
   }
   const gql = (query, variables) =>

@@ -1,12 +1,16 @@
 // 배경 서비스 워커: content script 로부터 받은 제출을 우리 백엔드 /api/ingest 로 POST 한다.
 
+const API_BASE = "https://algo-study-eight.vercel.app";
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== "ALGOSTUDY_INGEST") return;
 
   (async () => {
-    const { apiBase, token } = await chrome.storage.local.get(["apiBase", "token"]);
-    if (!apiBase || !token) {
-      sendResponse({ ok: false, error: "확장 설정에서 API 주소와 연동 토큰을 먼저 입력하세요." });
+    const stored = await chrome.storage.local.get(["apiBase", "token"]);
+    const apiBase = stored.apiBase || API_BASE;
+    const token = stored.token;
+    if (!token) {
+      sendResponse({ ok: false, error: "확장 팝업에서 연동 토큰을 먼저 입력하세요." });
       return;
     }
 

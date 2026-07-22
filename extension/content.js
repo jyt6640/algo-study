@@ -56,8 +56,8 @@ window.addEventListener("message", (ev) => {
 // 감지되면 버튼 클릭 없이 자동으로 코드까지 업로드 (설정 안 됐으면 조용히 스킵)
 async function autoUpload(slug, code, language, at) {
   if (!slug || autoUploadedFor === slug) return;
-  const cfg = await chrome.storage.local.get(["apiBase", "token"]);
-  if (!cfg.apiBase || !cfg.token) return;
+  const cfg = await chrome.storage.local.get(["token"]);
+  if (!cfg.token) return;
   autoUploadedFor = slug;
   if (!code) {
     const c = await captureCode();
