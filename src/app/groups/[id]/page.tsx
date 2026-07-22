@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
@@ -6,12 +6,14 @@ import { currentPeriod } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
-import { maybeRefreshLeetcode } from "@/lib/refresh";
+import { maybeRefreshLeetcode, maybeRefreshGroupMembers } from "@/lib/refresh";
+import { fetchDailyChallenge } from "@/lib/leetcode";
 import { currentUserIsAdmin } from "@/lib/admin";
 import { PublicStudy } from "./PublicStudy";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerEntry } from "./LedgerEntry";
 import { LeaveButton } from "./LeaveButton";
+import { CheatReportButton } from "@/components/CheatReportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +26,10 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   if (!group) notFound();
 
   const viewerId = await currentUserId();
-  // 스터디 열면 내 LeetCode 최근 풀이를 자동 반영 (3분 쓰로틀, 실패해도 무시)
+  // 스터디 열면 내 LeetCode + 전 멤버 최근 풀이를 자동 반영 (쓰로틀, 실패해도 무시).
+  // 확장을 안 쓰는 멤버의 풀이도 대시보드를 열 때 실시간처럼 반영된다.
   if (viewerId) await maybeRefreshLeetcode(viewerId).catch(() => {});
+  await maybeRefreshGroupMembers(groupId).catch(() => {});
 
   const [viewerMembership] = viewerId
     ? await db
@@ -93,6 +97,29 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     }),
   );
   rows.sort((a, b) => b.solved - a.solved);
+
+  // 이번 기간 예상 총 벌금 (미달 멤버 합산)
+  const periodPenaltyTotal = rows.reduce((s, r) => s + r.projectedPenalty, 0);
+  const behindCount = rows.filter((r) => r.solved < group.quota).length;
+
+  // 이번 기간 풀이들에 대한 치팅 의심 신고 집계
+  const periodSolveIds = rows.flatMap((r) => r.weekSolves.map((s) => s.id));
+  const reportRows = periodSolveIds.length
+    ? await db
+        .select({ solveLogId: schema.cheatReports.solveLogId, reporterId: schema.cheatReports.reporterId })
+        .from(schema.cheatReports)
+        .where(inArray(schema.cheatReports.solveLogId, periodSolveIds))
+    : [];
+  const reportCount = new Map<number, number>();
+  const reportedByViewer = new Set<number>();
+  for (const r of reportRows) {
+    reportCount.set(r.solveLogId, (reportCount.get(r.solveLogId) ?? 0) + 1);
+    if (viewerId && r.reporterId === viewerId) reportedByViewer.add(r.solveLogId);
+  }
+  const canSeeReportCount = isOwner || admin;
+
+  // 오늘의 LeetCode 문제 (1시간 캐시, 실패해도 무시)
+  const daily = await fetchDailyChallenge().catch(() => null);
 
   // 지난주까지 확정된 벌금 장부
   const ledger = await db
@@ -201,7 +228,49 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         </div>
       </div>
 
-      <div className="mt-10 space-y-3">
+      {!notStarted && !ended && (
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <div className="card p-5">
+            <div className="text-xs text-secondary">이번 기간 예상 총 벌금</div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums" style={{ color: periodPenaltyTotal > 0 ? "var(--warning)" : "var(--success)" }}>
+              {periodPenaltyTotal.toLocaleString()}원
+            </div>
+            <div className="mt-1 text-xs text-secondary">
+              {behindCount > 0 ? `${behindCount}명 미달 · 마감까지 반영` : "전원 달성 중 🎉"}
+            </div>
+          </div>
+          {daily && (
+            <a href={daily.url} target="_blank" rel="noreferrer" className="card group p-5 transition hover:brightness-105">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-secondary">오늘의 LeetCode 문제</span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  style={{
+                    background:
+                      daily.difficulty === "Easy"
+                        ? "color-mix(in srgb, var(--success) 16%, transparent)"
+                        : daily.difficulty === "Hard"
+                          ? "color-mix(in srgb, var(--danger) 16%, transparent)"
+                          : "color-mix(in srgb, var(--warning) 18%, transparent)",
+                    color:
+                      daily.difficulty === "Easy"
+                        ? "var(--success)"
+                        : daily.difficulty === "Hard"
+                          ? "var(--danger)"
+                          : "var(--warning)",
+                  }}
+                >
+                  {daily.difficulty}
+                </span>
+              </div>
+              <div className="mt-1 text-lg font-semibold tracking-tight group-hover:underline">{daily.title}</div>
+              <div className="mt-1 text-xs text-secondary">{daily.date} · LeetCode에서 풀기 →</div>
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="mt-8 space-y-3">
         {rows.map((r) => {
           const met = r.solved >= group.quota;
           return (
@@ -245,16 +314,32 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
               {r.weekSolves.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {r.weekSolves.map((s) => (
-                    <Link
+                    <span
                       key={s.id}
-                      href={`/groups/${groupId}/solve/${s.id}`}
-                      className="rounded-full px-2.5 py-1 text-xs transition-colors hover:brightness-95"
+                      className="inline-flex items-center gap-1 rounded-full py-1 pl-2.5 pr-1.5 text-xs"
                       style={{ background: "var(--surface-2)", color: "var(--text)" }}
-                      title="정답 코드 보기"
                     >
-                      {s.title ?? s.slug}
-                      <span className="ml-1.5 text-secondary">{fmtDateTime(s.acceptedAt, group.timezone)}</span>
-                    </Link>
+                      <Link
+                        href={`/groups/${groupId}/solve/${s.id}`}
+                        className="transition-colors hover:underline"
+                        title="정답 코드 보기"
+                      >
+                        {s.title ?? s.slug}
+                        <span className="ml-1.5 text-secondary">
+                          {fmtDateTime(s.acceptedAt, group.timezone)}
+                        </span>
+                      </Link>
+                      {isMember && (
+                        <CheatReportButton
+                          groupId={groupId}
+                          solveLogId={s.id}
+                          initialReported={reportedByViewer.has(s.id)}
+                          initialCount={reportCount.get(s.id) ?? 0}
+                          showCount={canSeeReportCount}
+                          canReport={r.userId !== viewerId}
+                        />
+                      )}
+                    </span>
                   ))}
                 </div>
               )}

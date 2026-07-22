@@ -230,6 +230,30 @@ export const submissionCodeVersions = pgTable(
   (t) => [index("submission_code_versions_event_idx").on(t.eventId, t.createdAt)],
 );
 
+// 문제별 "치팅 의심" 신고 (멤버가 다른 사람의 풀이를 신고)
+export const cheatReports = pgTable(
+  "cheat_reports",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    solveLogId: integer("solve_log_id")
+      .notNull()
+      .references(() => solveLogs.id, { onDelete: "cascade" }),
+    reporterId: integer("reporter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // 한 사람은 한 풀이를 한 번만 신고
+    uniqueIndex("cheat_report_solve_reporter_uq").on(t.solveLogId, t.reporterId),
+    index("cheat_report_group_idx").on(t.groupId),
+  ],
+);
+
 export const membershipEvents = pgTable(
   "membership_events",
   {

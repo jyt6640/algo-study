@@ -8,6 +8,7 @@ import { currentUserId } from "@/lib/session";
 import { getMembership } from "@/lib/membership";
 import { MembersOnly } from "@/components/MembersOnly";
 import { ManualCodeEntry } from "@/components/ManualCodeEntry";
+import { CodeBlock } from "@/components/CodeBlock";
 
 export const dynamic = "force-dynamic";
 
@@ -105,12 +106,7 @@ export default async function SolvePage({
           <div className="mb-2 text-sm font-semibold">
             정답 코드 {code.language ? <span className="text-secondary">({code.language})</span> : null}
           </div>
-          <pre
-            className="overflow-auto rounded-2xl p-4 text-sm leading-relaxed"
-            style={{ background: "var(--surface-2)", fontFamily: "var(--mono)" }}
-          >
-            <code>{code.code}</code>
-          </pre>
+          <CodeBlock code={code.code} language={code.language} />
         </div>
       ) : (
         <div className="card mt-6 p-6 text-sm text-secondary">

@@ -19,6 +19,7 @@
     "@neondatabase/serverless": "^0.10.4",
     "bufferutil": "^4.1.0",
     "drizzle-orm": "^0.38.3",
+    "highlight.js": "^11.11.1",
     "jose": "^6.2.4",
     "nanoid": "^5.0.9",
     "next": "^15.1.6",

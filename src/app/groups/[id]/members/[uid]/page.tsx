@@ -11,6 +11,7 @@ import { getMembership } from "@/lib/membership";
 import { ProfileCard } from "@/components/ProfileCard";
 import { Heatmap } from "@/components/Heatmap";
 import { MembersOnly } from "@/components/MembersOnly";
+import { CodeBlock } from "@/components/CodeBlock";
 
 export const dynamic = "force-dynamic";
 
@@ -165,12 +166,9 @@ export default async function MemberPage({
                     <summary className="cursor-pointer text-xs text-secondary hover:underline">
                       코드 보기 {code.language ? `(${code.language})` : ""}
                     </summary>
-                    <pre
-                      className="mt-2 max-h-96 overflow-auto rounded-xl p-3 text-xs"
-                      style={{ background: "var(--surface-2)", fontFamily: "var(--mono)" }}
-                    >
-                      <code>{code.code}</code>
-                    </pre>
+                    <div className="mt-2 max-h-96 overflow-auto">
+                      <CodeBlock code={code.code} language={code.language} />
+                    </div>
                   </details>
                 )}
               </li>

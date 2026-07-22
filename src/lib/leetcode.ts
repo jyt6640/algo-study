@@ -196,3 +196,58 @@ export async function fetchRecentAcSubmissions(
     timestamp: Number(s.timestamp),
   }));
 }
+
+export interface DailyChallenge {
+  date: string; // YYYY-MM-DD
+  slug: string;
+  title: string;
+  difficulty: string; // Easy | Medium | Hard
+  url: string;
+}
+
+const DAILY_QUERY = `
+query questionOfToday {
+  activeDailyCodingChallengeQuestion {
+    date
+    link
+    question { title titleSlug difficulty }
+  }
+}`;
+
+/** 오늘의 LeetCode 데일리 챌린지. 실패하면 null. 1시간 캐시. */
+export async function fetchDailyChallenge(): Promise<DailyChallenge | null> {
+  try {
+    const res = await fetch(LEETCODE_GQL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+        Referer: "https://leetcode.com/problemset/",
+      },
+      body: JSON.stringify({ query: DAILY_QUERY }),
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      data?: {
+        activeDailyCodingChallengeQuestion?: {
+          date: string;
+          link: string;
+          question: { title: string; titleSlug: string; difficulty: string };
+        };
+      };
+    };
+    const d = json.data?.activeDailyCodingChallengeQuestion;
+    if (!d?.question) return null;
+    return {
+      date: d.date,
+      slug: d.question.titleSlug,
+      title: d.question.title,
+      difficulty: d.question.difficulty,
+      url: `https://leetcode.com${d.link}`,
+    };
+  } catch {
+    return null;
+  }
+}
