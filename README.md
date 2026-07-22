@@ -45,7 +45,14 @@ npm run dev               # http://localhost:3000
 
 Cron 엔드포인트는 프로덕션에서 `Authorization: Bearer $CRON_SECRET` 필요.
 
-## 확장프로그램 설치 (개발자 모드)
+## 확장프로그램 설치
+
+### 일반 사용자 — 크롬 웹스토어 (자동 업데이트) ⭐
+[Chrome Web Store 설치](https://chromewebstore.google.com/detail/khkdmmojedhfebdolbfkdgkldeiabafe) —
+스토어에서 설치하면 크롬이 새 버전을 **자동으로 업데이트**한다. `ext-v*` 태그로 새 버전을 게시하면(CI/CD)
+스토어 설치 유저는 별도 조작 없이 최신이 된다.
+
+### 개발/테스트 — 압축해제된 확장 로드 (자동 업데이트 안 됨)
 
 1. Chrome → `chrome://extensions` → 개발자 모드 ON → **압축해제된 확장 프로그램 로드** → `extension/` 선택
 2. 확장 팝업에서 **API 주소**(예: `http://localhost:3000`)와 **연동 토큰**(대시보드 "내 연동 토큰 발급") 입력·저장
