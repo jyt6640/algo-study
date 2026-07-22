@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { currentUserId } from "@/lib/session";
 import { SettingsForm } from "./SettingsForm";
+import { GroupAdmin } from "./GroupAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +36,20 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  const members = await db
+    .select({ userId: schema.memberships.userId, nickname: schema.users.nickname, role: schema.memberships.role })
+    .from(schema.memberships)
+    .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
+    .where(eq(schema.memberships.groupId, groupId));
+
   return (
-    <main className="rise mx-auto max-w-2xl px-6 py-14">
-      <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-        ← {group.name}
-      </Link>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">스터디 설정</h1>
+    <main className="rise mx-auto max-w-2xl space-y-5 px-6 py-14">
+      <div>
+        <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
+          ← {group.name}
+        </Link>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight">스터디 설정</h1>
+      </div>
       <SettingsForm
         groupId={groupId}
         initial={{
@@ -51,8 +60,10 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
           accountBank: group.accountBank ?? "",
           accountNumber: group.accountNumber ?? "",
           accountHolder: group.accountHolder ?? "",
+          discordWebhook: group.discordWebhook ?? "",
         }}
       />
+      <GroupAdmin groupId={groupId} members={members} />
     </main>
   );
 }

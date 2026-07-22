@@ -9,6 +9,7 @@ import { fmtDateTime } from "@/lib/format";
 import { maybeRefreshLeetcode } from "@/lib/refresh";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerEntry } from "./LedgerEntry";
+import { LeaveButton } from "./LeaveButton";
 
 export const dynamic = "force-dynamic";
 
@@ -143,10 +144,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             <Link href="/" className="text-secondary hover:underline">
               내 스터디
             </Link>
-            {isOwner && (
+            {isOwner ? (
               <Link href={`/groups/${groupId}/settings`} className="accent hover:underline">
                 설정
               </Link>
+            ) : (
+              isMember && <LeaveButton groupId={groupId} />
             )}
           </div>
         </div>

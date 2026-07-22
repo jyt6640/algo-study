@@ -11,6 +11,7 @@ type Initial = {
   accountBank: string;
   accountNumber: string;
   accountHolder: string;
+  discordWebhook: string;
 };
 
 export function SettingsForm({ groupId, initial }: { groupId: number; initial: Initial }) {
@@ -124,6 +125,20 @@ export function SettingsForm({ groupId, initial }: { groupId: number; initial: I
             />
           </div>
         </div>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="text-lg font-semibold">알림 (Discord)</h2>
+        <p className="mt-1 text-sm text-secondary">
+          웹훅 URL을 넣으면 마감 결과와 리마인더(D-1)를 이 채널로 보내요. Discord 채널 설정 → 연동 →
+          웹후크에서 생성.
+        </p>
+        <input
+          className="input mt-3"
+          value={form.discordWebhook}
+          onChange={(e) => set("discordWebhook", e.target.value)}
+          placeholder="https://discord.com/api/webhooks/..."
+        />
       </section>
 
       <div className="flex items-center gap-3">
