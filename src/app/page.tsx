@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 import { auth, signIn, signOut } from "@/auth";
 import { db, schema } from "@/db";
 import { HomeForms } from "./HomeForms";
 import { PlatformLink } from "@/components/PlatformLink";
+import { DiscoverJoin } from "./DiscoverJoin";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,26 @@ export default async function Home() {
     .from(schema.memberships)
     .innerJoin(schema.groups, eq(schema.groups.id, schema.memberships.groupId))
     .where(eq(schema.memberships.userId, userId));
+
+  // 둘러보기: 내가 안 든 활성 스터디 (멤버 수 포함)
+  const myGroupIds = studies.map((s) => s.groupId);
+  const discover = await db
+    .select({
+      groupId: schema.groups.id,
+      name: schema.groups.name,
+      quota: schema.groups.quota,
+      memberCount: sql<number>`count(${schema.memberships.id})::int`,
+    })
+    .from(schema.groups)
+    .leftJoin(schema.memberships, eq(schema.memberships.groupId, schema.groups.id))
+    .where(
+      myGroupIds.length
+        ? and(eq(schema.groups.active, true), notInArray(schema.groups.id, myGroupIds))
+        : eq(schema.groups.active, true),
+    )
+    .groupBy(schema.groups.id)
+    .orderBy(sql`count(${schema.memberships.id}) desc`)
+    .limit(20);
 
   const [me] = await db
     .select({ leetcode: schema.users.leetcodeHandle, programmers: schema.users.programmersHandle })
@@ -120,6 +141,26 @@ export default async function Home() {
           </div>
         )}
       </section>
+
+      {discover.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold">둘러보기</h2>
+          <p className="mt-1 text-sm text-secondary">지금 활성화된 스터디예요. 바로 참여할 수 있어요.</p>
+          <div className="mt-4 space-y-2">
+            {discover.map((d) => (
+              <div key={d.groupId} className="card flex items-center justify-between p-4">
+                <Link href={`/groups/${d.groupId}`} className="min-w-0">
+                  <div className="truncate font-medium hover:underline">{d.name}</div>
+                  <div className="text-xs text-secondary">
+                    멤버 {d.memberCount}명 · 주 {d.quota}솔
+                  </div>
+                </Link>
+                <DiscoverJoin groupId={d.groupId} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-10">
         <HomeForms />

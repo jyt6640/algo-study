@@ -117,7 +117,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     <main className="mx-auto max-w-2xl px-6 py-14">
       <div className="rise flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{group.name}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {group.name}
+            {!group.active && (
+              <span className="ml-2 align-middle text-sm text-secondary">· 비활성(일시정지)</span>
+            )}
+          </h1>
           <p className="mt-2 text-sm text-secondary">
             이번 주 ({weekOf} 시작) · 마감까지{" "}
             <b style={{ color: "var(--text)" }}>

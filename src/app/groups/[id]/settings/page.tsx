@@ -54,6 +54,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
         groupId={groupId}
         initial={{
           name: group.name,
+          active: group.active,
           quota: group.quota,
           penaltyType: group.penaltyType,
           penaltyAmount: group.penaltyAmount,

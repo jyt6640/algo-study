@@ -48,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json().catch(() => ({}));
   const patch: Record<string, unknown> = {};
   if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
+  if (typeof body.active === "boolean") patch.active = body.active;
   if (body.quota != null) patch.quota = Math.max(1, Number(body.quota));
   if (body.penaltyType === "FIXED" || body.penaltyType === "PER_MISSING") patch.penaltyType = body.penaltyType;
   if (body.penaltyAmount != null) patch.penaltyAmount = Math.max(0, Number(body.penaltyAmount));

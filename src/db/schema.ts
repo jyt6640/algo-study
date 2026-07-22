@@ -38,6 +38,7 @@ export const groups = pgTable("groups", {
   name: text("name").notNull(),
   inviteCode: text("invite_code").notNull().unique(),
   quota: integer("quota").notNull().default(7),
+  active: boolean("active").notNull().default(true),
   penaltyType: penaltyTypeEnum("penalty_type").notNull().default("FIXED"),
   penaltyAmount: integer("penalty_amount").notNull().default(10000),
   timezone: text("timezone").notNull().default("Asia/Seoul"),

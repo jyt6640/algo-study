@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Initial = {
   name: string;
+  active: boolean;
   quota: number;
   penaltyType: "FIXED" | "PER_MISSING";
   penaltyAmount: number;
@@ -53,6 +54,20 @@ export function SettingsForm({ groupId, initial }: { groupId: number; initial: I
             <label className="field-label">스터디 이름</label>
             <input className="input" value={form.name} onChange={(e) => set("name", e.target.value)} />
           </div>
+          <label className="flex items-center justify-between rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+            <span className="text-sm">
+              <b>활성화</b>{" "}
+              <span className="text-secondary">
+                — 끄면 둘러보기에서 숨겨지고 주간 마감·리마인더가 멈춰요 (일시정지)
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => set("active", e.target.checked)}
+              style={{ width: 18, height: 18 }}
+            />
+          </label>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="field-label">주간 목표(솔)</label>

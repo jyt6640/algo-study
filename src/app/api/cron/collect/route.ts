@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   const groups = await db
     .select()
     .from(schema.groups)
-    .where(isNotNull(schema.groups.discordWebhook));
+    .where(and(isNotNull(schema.groups.discordWebhook), eq(schema.groups.active, true)));
   for (const g of groups) {
     if (!g.discordWebhook || !isLastDayOfWeek(now, g.timezone)) continue;
     const { start, end } = weekBounds(now, g.timezone);

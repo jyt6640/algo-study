@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
-  const allGroups = await db.select().from(schema.groups);
+  // 비활성(일시정지) 스터디는 마감/벌금 확정 제외
+  const allGroups = await db.select().from(schema.groups).where(eq(schema.groups.active, true));
   const results: Array<{ groupId: number; weekOf: string; finalized: number }> = [];
 
   for (const group of allGroups) {
