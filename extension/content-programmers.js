@@ -6,6 +6,21 @@ s.onload = () => s.remove();
 (document.head || document.documentElement).appendChild(s);
 
 let lastPassed = null; // { lessonId, at }
+let submitSnapshot = null; // 제출 클릭 순간 캡처한 코드 { lessonId, code, language }
+
+// "제출 후 채점하기" 를 누르는 순간의 코드를 스냅샷 (통과 시 이걸 업로드)
+document.addEventListener(
+  "click",
+  (e) => {
+    const t = e.target && e.target.closest && e.target.closest("#submit-code");
+    if (!t) return;
+    const lesson = currentLesson();
+    captureCode().then(({ code, language }) => {
+      if (code) submitSnapshot = { lessonId: lesson, code, language };
+    });
+  },
+  true,
+);
 
 function currentLesson() {
   const m = location.pathname.match(/\/learn\/courses\/\d+\/lessons\/(\d+)/);
@@ -69,7 +84,17 @@ async function autoUpload(lesson) {
     autoUploadedFor = null;
     return;
   }
-  const { code, language } = await captureCode();
+  // 제출 순간 스냅샷 우선, 없으면 현재 에디터
+  let code = "";
+  let language = "";
+  if (submitSnapshot && submitSnapshot.lessonId === lesson) {
+    code = submitSnapshot.code;
+    language = submitSnapshot.language;
+  } else {
+    const c = await captureCode();
+    code = c.code;
+    language = c.language;
+  }
   chrome.runtime.sendMessage(
     {
       type: "ALGOSTUDY_INGEST",
@@ -185,6 +210,7 @@ setInterval(() => {
     lastPath = location.pathname;
     lastPassed = null;
     autoUploadedFor = null;
+    submitSnapshot = null;
   }
   mountButton();
 }, 1500);
