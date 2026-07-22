@@ -13,3 +13,6 @@ algo-study-extension.zip
 
 .playwright-mcp
 shot*.png
+
+# 로컬 계획 도구 산출물
+.omo/
