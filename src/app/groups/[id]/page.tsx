@@ -206,43 +206,17 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {isOwner && (
-            <div className="card px-4 py-3 text-right">
-              <div className="text-xs text-secondary">초대코드 (방장만)</div>
-              <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
-            </div>
-          )}
-          <div className="flex gap-3 text-sm">
-            {group.githubRepo && (
-              <a
-                href={`https://github.com/${group.githubRepo}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-secondary hover:underline"
-              >
-                GitHub
-              </a>
-            )}
-            <Link href={`/groups/${groupId}/activity`} className="text-secondary hover:underline">
-              활동
+          <div className="flex items-center gap-3 text-sm">
+            <Link href="/" className="text-secondary hover:underline">
+              홈
             </Link>
             <Link href="/me" className="text-secondary hover:underline">
               내 프로필
             </Link>
-            <Link href="/" className="text-secondary hover:underline">
-              내 스터디
-            </Link>
             {isOwner || admin ? (
-              <>
-                <Link href={`/groups/${groupId}/manage`} className="accent hover:underline">
-                  방장 대시보드
-                </Link>
-                {isOwner && (
-                  <Link href={`/groups/${groupId}/settings`} className="text-secondary hover:underline">
-                    설정
-                  </Link>
-                )}
-              </>
+              <Link href={`/groups/${groupId}/manage`} className="btn btn-secondary !px-3.5 !py-1.5">
+                관리하기
+              </Link>
             ) : (
               isMember && <LeaveButton groupId={groupId} />
             )}

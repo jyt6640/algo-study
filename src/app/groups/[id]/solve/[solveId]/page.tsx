@@ -66,9 +66,14 @@ export default async function SolvePage({
 
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
-      <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-        ← 대시보드
-      </Link>
+      <div className="flex items-center gap-3 text-sm">
+        <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
+          ← 대시보드
+        </Link>
+        <Link href="/" className="text-secondary hover:underline">
+          홈
+        </Link>
+      </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{solve.title ?? solve.slug}</h1>

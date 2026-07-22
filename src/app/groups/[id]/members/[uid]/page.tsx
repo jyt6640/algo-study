@@ -78,9 +78,14 @@ export default async function MemberPage({
 
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
-      <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-        ← {group.name}
-      </Link>
+      <div className="flex items-center gap-3 text-sm">
+        <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
+          ← {group.name}
+        </Link>
+        <Link href="/" className="text-secondary hover:underline">
+          홈
+        </Link>
+      </div>
 
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">{user.nickname}</h1>
       <p className="mt-2 text-sm text-secondary">

@@ -145,13 +145,28 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
   return (
     <main className="mx-auto max-w-3xl px-6 py-14">
       <div className="flex items-center justify-between gap-3">
-        <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-          ← 대시보드
-        </Link>
-        <div className="flex gap-3 text-sm">
+        <div className="flex items-center gap-3 text-sm">
+          <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
+            ← 대시보드
+          </Link>
+          <Link href="/" className="text-secondary hover:underline">
+            홈
+          </Link>
+        </div>
+        <div className="flex items-center gap-3 text-sm">
           <Link href={`/groups/${groupId}/activity`} className="text-secondary hover:underline">
             활동
           </Link>
+          {group.githubRepo && (
+            <a
+              href={`https://github.com/${group.githubRepo}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-secondary hover:underline"
+            >
+              GitHub
+            </a>
+          )}
           {isOwner && (
             <Link href={`/groups/${groupId}/settings`} className="accent hover:underline">
               설정

@@ -72,9 +72,14 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
 
   return (
     <main className="rise mx-auto max-w-2xl px-6 py-14">
-      <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-        ← {group.name}
-      </Link>
+      <div className="flex items-center gap-3 text-sm">
+        <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
+          ← {group.name}
+        </Link>
+        <Link href="/" className="text-secondary hover:underline">
+          홈
+        </Link>
+      </div>
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">스터디 활동</h1>
       <p className="mt-2 text-sm text-secondary">
         누가 어떤 문제를 풀었는지 한눈에 보기. 확장으로 올린 풀이는 코드까지 볼 수 있어요.

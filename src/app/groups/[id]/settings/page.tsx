@@ -29,9 +29,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
   if (membership?.role !== "OWNER") {
     return (
       <main className="mx-auto max-w-2xl px-6 py-14">
-        <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-          ← 대시보드
-        </Link>
+        <div className="flex items-center gap-3 text-sm">
+          <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
+            ← 대시보드
+          </Link>
+          <Link href="/" className="text-secondary hover:underline">
+            홈
+          </Link>
+        </div>
         <p className="mt-6 text-sm text-secondary">방장만 설정을 볼 수 있어요.</p>
       </main>
     );
@@ -52,9 +57,17 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
   return (
     <main className="rise mx-auto max-w-2xl space-y-5 px-6 py-14">
       <div>
-        <Link href={`/groups/${groupId}`} className="text-sm text-secondary hover:underline">
-          ← {group.name}
-        </Link>
+        <div className="flex items-center gap-3 text-sm">
+          <Link href={`/groups/${groupId}/manage`} className="text-secondary hover:underline">
+            ← 관리하기
+          </Link>
+          <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
+            대시보드
+          </Link>
+          <Link href="/" className="text-secondary hover:underline">
+            홈
+          </Link>
+        </div>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">스터디 설정</h1>
       </div>
       <SettingsForm
