@@ -138,7 +138,7 @@ async function doUpload(btn) {
       problemTitle: document.title.replace(/ - LeetCode.*$/, "").trim(),
       language: language || lastAccepted?.language || "",
       code,
-      acceptedAt: (accepted && lastAccepted.at) || new Date().toISOString(),
+      acceptedAt: (accepted && lastAccepted?.at) || new Date().toISOString(),
     },
     (res, err) => {
       btn.disabled = false;

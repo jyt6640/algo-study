@@ -25,7 +25,7 @@ jobs:
       - name: Package extension zip
         run: |
           cd extension
-          zip -r -X ../algo-study-extension.zip . -x '*.DS_Store' -x '*.md'
+          zip -r -X ../algo-study-extension.zip . -x '*.DS_Store' -x '*.md' -x '*.test.js'
           cd ..
           unzip -l algo-study-extension.zip
 
