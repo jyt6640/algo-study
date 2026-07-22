@@ -1,10 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ImportCode } from "@/components/ImportCode";
 
 // 스터디 대시보드의 확장 연동 섹션. LeetCode 연동은 로그인 자동 연동 + /me 로 옮겼다.
 export function MemberPanel({ viewerId }: { groupId?: number; viewerId: number }) {
-  return <ExtensionLink userId={viewerId} />;
+  return (
+    <>
+      <section className="card mt-6 p-6">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">내 코드 가져오기</h2>
+            <p className="mt-1 text-sm text-secondary">
+              확장이 설치돼 있으면 최근 LeetCode 풀이의 정답 코드를 여기서 바로 불러와요.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3">
+          <ImportCode />
+        </div>
+      </section>
+      <ExtensionLink userId={viewerId} />
+    </>
+  );
 }
 
 function ExtensionLink({ userId }: { userId: number }) {

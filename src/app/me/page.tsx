@@ -10,6 +10,7 @@ import { Heatmap } from "@/components/Heatmap";
 import { PlatformLink } from "@/components/PlatformLink";
 import { RefreshButton } from "./RefreshButton";
 import { Tokens } from "./Tokens";
+import { ImportCode } from "@/components/ImportCode";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,8 @@ export default async function MyProfile() {
       </div>
 
       {user.leetcodeHandle && (
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+          <ImportCode />
           <RefreshButton />
         </div>
       )}
