@@ -8,6 +8,7 @@ import { currentUserId } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
 import { maybeRefreshLeetcode } from "@/lib/refresh";
 import { MemberPanel } from "./MemberPanel";
+import { LedgerEntry } from "./LedgerEntry";
 
 export const dynamic = "force-dynamic";
 
@@ -83,11 +84,14 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   // 지난주까지 확정된 벌금 장부
   const ledger = await db
     .select({
+      id: schema.weeklyResults.id,
       weekOf: schema.weeklyResults.weekOf,
       nickname: schema.users.nickname,
       solvedCount: schema.weeklyResults.solvedCount,
       metQuota: schema.weeklyResults.metQuota,
       penaltyAmount: schema.weeklyResults.penaltyAmount,
+      exempt: schema.weeklyResults.exempt,
+      paid: schema.weeklyResults.paid,
     })
     .from(schema.weeklyResults)
     .innerJoin(schema.users, eq(schema.users.id, schema.weeklyResults.userId))
@@ -99,7 +103,10 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     if (!ledgerByWeek.has(l.weekOf)) ledgerByWeek.set(l.weekOf, []);
     ledgerByWeek.get(l.weekOf)!.push(l);
   }
-  const totalPenalty = ledger.reduce((s, l) => s + l.penaltyAmount, 0);
+  // 면제 제외한 총 벌금 / 미납 합계
+  const owed = ledger.filter((l) => !l.exempt && l.penaltyAmount > 0);
+  const totalPenalty = owed.reduce((s, l) => s + l.penaltyAmount, 0);
+  const unpaidTotal = owed.filter((l) => !l.paid).reduce((s, l) => s + l.penaltyAmount, 0);
 
   const msLeft = end.getTime() - Date.now();
   const daysLeft = Math.max(0, Math.floor(msLeft / 86400000));
@@ -211,7 +218,8 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         <div className="flex items-baseline justify-between">
           <h2 className="text-xl font-semibold">벌금 장부</h2>
           <span className="text-sm text-secondary">
-            누적 <b style={{ color: "var(--warning)" }}>{totalPenalty.toLocaleString()}원</b>
+            미납 <b style={{ color: "var(--warning)" }}>{unpaidTotal.toLocaleString()}원</b>
+            <span className="ml-1">/ 누적 {totalPenalty.toLocaleString()}원</span>
           </span>
         </div>
         {ledgerByWeek.size === 0 ? (
@@ -224,20 +232,8 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
               <div key={week} className="card p-5">
                 <div className="mb-3 text-sm font-semibold text-secondary">{week} 주</div>
                 <div className="space-y-2">
-                  {entries.map((e, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span>
-                        {e.nickname}{" "}
-                        <span className="text-secondary">
-                          ({e.solvedCount}/{group.quota})
-                        </span>
-                      </span>
-                      {e.metQuota ? (
-                        <span style={{ color: "var(--success)" }}>✓ 달성</span>
-                      ) : (
-                        <span style={{ color: "var(--warning)" }}>{e.penaltyAmount.toLocaleString()}원</span>
-                      )}
-                    </div>
+                  {entries.map((e) => (
+                    <LedgerEntry key={e.id} groupId={groupId} entry={e} quota={group.quota} isOwner={isOwner} />
                   ))}
                 </div>
               </div>

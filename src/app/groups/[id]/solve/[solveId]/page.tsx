@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { fmtDateTime } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
+import { currentUserId } from "@/lib/session";
+import { getMembership } from "@/lib/membership";
+import { MembersOnly } from "@/components/MembersOnly";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,9 @@ export default async function SolvePage({
     .where(eq(schema.groups.id, groupId))
     .limit(1);
   const tz = group?.timezone ?? "Asia/Seoul";
+
+  const viewerId = await currentUserId();
+  if (!(await getMembership(viewerId, groupId))) return <MembersOnly groupId={groupId} />;
 
   const [solve] = await db
     .select({

@@ -6,8 +6,11 @@ import { weekBounds } from "@/lib/week";
 import { fmtDateTime, combineHeatmap } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
 import { fetchFullProfile } from "@/lib/leetcode";
+import { currentUserId } from "@/lib/session";
+import { getMembership } from "@/lib/membership";
 import { ProfileCard } from "@/components/ProfileCard";
 import { Heatmap } from "@/components/Heatmap";
+import { MembersOnly } from "@/components/MembersOnly";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +27,11 @@ export default async function MemberPage({
   const [group] = await db.select().from(schema.groups).where(eq(schema.groups.id, groupId)).limit(1);
   const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1);
   if (!group || !user) notFound();
+
+  // 프라이버시: 그룹 멤버만 열람
+  const viewerId = await currentUserId();
+  const viewerMembership = await getMembership(viewerId, groupId);
+  if (!viewerMembership) return <MembersOnly groupId={groupId} />;
 
   const { start, end, weekOf } = weekBounds(new Date(), group.timezone);
 

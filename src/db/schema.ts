@@ -45,6 +45,8 @@ export const groups = pgTable("groups", {
   accountBank: text("account_bank"),
   accountNumber: text("account_number"),
   accountHolder: text("account_holder"),
+  // 리마인더·마감 알림을 보낼 Discord 웹훅 (방장이 등록)
+  discordWebhook: text("discord_webhook"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -134,6 +136,11 @@ export const weeklyResults = pgTable(
     solvedCount: integer("solved_count").notNull(),
     metQuota: boolean("met_quota").notNull(),
     penaltyAmount: integer("penalty_amount").notNull().default(0),
+    // 방장이 면제 처리하면 벌금 의무 없음 (카운트가 부당할 때 보정)
+    exempt: boolean("exempt").notNull().default(false),
+    // 벌금 납부 추적
+    paid: boolean("paid").notNull().default(false),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("weekly_user_group_week_uq").on(t.userId, t.groupId, t.weekOf)],

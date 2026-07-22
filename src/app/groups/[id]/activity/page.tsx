@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
+import { currentUserId } from "@/lib/session";
+import { getMembership } from "@/lib/membership";
+import { MembersOnly } from "@/components/MembersOnly";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +23,9 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
 
   const [group] = await db.select().from(schema.groups).where(eq(schema.groups.id, groupId)).limit(1);
   if (!group) notFound();
+
+  const viewerId = await currentUserId();
+  if (!(await getMembership(viewerId, groupId))) return <MembersOnly groupId={groupId} />;
 
   const members = await db
     .select({ userId: schema.memberships.userId })
