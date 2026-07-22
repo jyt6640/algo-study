@@ -38,29 +38,31 @@ Settings → Secrets and variables → Actions 에 등록:
 - **게시 상태를 "프로덕션"으로** 하거나, "테스트" 유지 시 **테스트 사용자에 본인(스토어 개발자) 계정 추가**
   (테스트 모드 refresh token 은 7일 후 만료될 수 있으니 프로덕션 권장)
 
-### 3) OAuth 클라이언트 만들기
+### 3) OAuth 클라이언트 만들기 (웹 애플리케이션)
 - **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID**
-- 유형: **데스크톱 앱**
+- 유형: **웹 애플리케이션** (OOB 방식은 구글이 폐기 → 데스크톱 대신 웹 + localhost)
+- **승인된 리디렉션 URI** 에 `http://localhost:8818` 추가
 - 생성된 **클라이언트 ID / 보안 비밀** → `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`
 
 ### 4) Refresh Token 발급
 브라우저에서 (`YOUR_CLIENT_ID` 교체) 열고 본인 계정으로 승인:
 ```
-https://accounts.google.com/o/oauth2/auth?response_type=code&scope=https://www.googleapis.com/auth/chromewebstore&access_type=offline&approval_prompt=force&redirect_uri=urn:ietf:wg:oauth:2.0:oob&client_id=YOUR_CLIENT_ID
+https://accounts.google.com/o/oauth2/auth?response_type=code&access_type=offline&prompt=consent&scope=https://www.googleapis.com/auth/chromewebstore&redirect_uri=http://localhost:8818&client_id=YOUR_CLIENT_ID
 ```
-화면에 나온 **code** 를 복사해, 터미널에서 (모두 교체) 실행:
+- "확인되지 않은 앱" 경고 → 고급 → 계속
+- 승인하면 `http://localhost:8818/?code=...` 로 이동(페이지는 안 열림, 정상). **주소창의 `code=` 값**을 복사
+
+터미널에서 (모두 교체, code 는 몇 분 안에 만료·1회용):
 ```bash
 curl -s https://oauth2.googleapis.com/token \
   -d client_id=YOUR_CLIENT_ID \
   -d client_secret=YOUR_CLIENT_SECRET \
   -d code=PASTED_CODE \
   -d grant_type=authorization_code \
-  -d redirect_uri=urn:ietf:wg:oauth:2.0:oob
+  -d redirect_uri=http://localhost:8818
 ```
 응답 JSON 의 **`refresh_token`** → `CWS_REFRESH_TOKEN`
-
-> `urn:ietf:wg:oauth:2.0:oob` 가 막히면 클라이언트 유형을 "웹 애플리케이션"으로 만들고
-> 승인된 리디렉션 URI 에 `http://localhost` 를 추가해 code 를 받는다.
+(`invalid_grant` 오류 시 code 만료/재사용 → 위 URL 로 새 code 를 받아 다시 실행)
 
 ## 확인
 Secrets 4개 등록 후, `manifest.json` version 올리고 `ext-v*` 태그 푸시 →
