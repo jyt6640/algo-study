@@ -1,8 +1,11 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { neonConfig, Pool } from "@neondatabase/serverless";
+import ws from "ws";
+import { drizzle, type NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "./schema";
 
-type DB = NeonHttpDatabase<typeof schema>;
+neonConfig.webSocketConstructor = ws;
+
+type DB = NeonDatabase<typeof schema>;
 
 // 지연 초기화: 빌드 시점(모듈 로드)엔 DATABASE_URL 을 요구하지 않고,
 // 실제 쿼리가 실행되는 런타임 첫 접근에만 연결을 만든다.
@@ -14,7 +17,8 @@ function getDb(): DB {
   if (!url) {
     throw new Error("DATABASE_URL is not set. Copy .env.example to .env and fill it in.");
   }
-  _db = drizzle(neon(url), { schema });
+  const pool = new Pool({ connectionString: url });
+  _db = drizzle({ client: pool, schema });
   return _db;
 }
 

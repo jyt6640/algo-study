@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { issueExtensionToken } from "@/lib/tokens";
 import { currentUserId } from "@/lib/session";
+import { readJsonBody, tokenDeleteSchema } from "@/lib/ingestValidation";
 
 export const runtime = "nodejs";
 
@@ -37,9 +38,11 @@ export async function DELETE(req: NextRequest) {
   const userId = await currentUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
-  const id = Number(body?.id);
-  if (!Number.isFinite(id)) return NextResponse.json({ error: "id 필요" }, { status: 400 });
+  const bodyResult = await readJsonBody(req);
+  if (!bodyResult.ok) return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+  const parsed = tokenDeleteSchema.safeParse(bodyResult.value);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
+  const id = parsed.data.id;
 
   await db
     .update(schema.extensionTokens)

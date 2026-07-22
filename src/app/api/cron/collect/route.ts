@@ -5,6 +5,7 @@ import { fetchRecentAcSubmissions } from "@/lib/leetcode";
 import { isAuthorizedCron } from "@/lib/cronAuth";
 import { sendDiscord } from "@/lib/notify";
 import { currentPeriod } from "@/lib/week";
+import { appendSubmissionEvent, ensureTransaction, submissionEventKey } from "@/lib/ledger";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,21 +29,20 @@ export async function GET(req: NextRequest) {
     try {
       const subs = await fetchRecentAcSubmissions(handle, 20);
       for (const s of subs) {
-        const res = await db
-          .insert(schema.solveLogs)
-          .values({
+        const acceptedAt = new Date(s.timestamp * 1000);
+        const result = await ensureTransaction((tx) =>
+          appendSubmissionEvent(tx, {
             userId: u.id,
             platform: "LEETCODE",
             problemSlug: s.problemSlug,
             problemTitle: s.problemTitle,
-            acceptedAt: new Date(s.timestamp * 1000),
-            source: "LEETCODE_GQL",
-          })
-          .onConflictDoNothing({
-            target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
-          })
-          .returning({ id: schema.solveLogs.id });
-        if (res.length) inserted++;
+            acceptedAt,
+            source: "CRON",
+            verificationLevel: "SERVER_VERIFIED",
+            eventKey: submissionEventKey({ userId: u.id, platform: "LEETCODE", problemSlug: s.problemSlug, acceptedAt, source: "CRON" }),
+          }),
+        );
+        if (result.isNew) inserted++;
       }
     } catch (e) {
       errors.push({ handle, error: e instanceof Error ? e.message : String(e) });

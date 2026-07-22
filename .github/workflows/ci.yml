@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm exec tsc -- --noEmit
+      - run: npm run build
+      - run: node --check extension/background.js
+      - run: node --check extension/bridge.js
+      - run: node --check extension/content.js
+      - run: npm run ext:package
+      - run: unzip -l algo-study-extension.zip | tee /tmp/extension-list.txt && ! grep -E '\.test\.js$|\.DS_Store$' /tmp/extension-list.txt

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hashToken } from "@/lib/tokens";
+import { appendSubmissionEvent, ensureTransaction, submissionEventKey } from "@/lib/ledger";
+import { ingestPayloadSchema, readJsonBody } from "@/lib/ingestValidation";
 
 export const runtime = "nodejs";
 
@@ -25,79 +27,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "유효하지 않은 토큰입니다." }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => null);
-  if (!body?.problemSlug) {
-    return NextResponse.json({ error: "problemSlug 가 필요합니다." }, { status: 400 });
-  }
-  // 남용 방지: 코드 크기 제한 (200KB)
-  if (typeof body.code === "string" && body.code.length > 200_000) {
-    body.code = body.code.slice(0, 200_000);
-  }
-  if (typeof body.problemSlug !== "string" || body.problemSlug.length > 300) {
-    return NextResponse.json({ error: "problemSlug 가 올바르지 않습니다." }, { status: 400 });
-  }
+  const bodyResult = await readJsonBody(req);
+  if (!bodyResult.ok) return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+  const parsed = ingestPayloadSchema.safeParse(bodyResult.value);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
 
+  const body = parsed.data;
   const acceptedAt = body.acceptedAt ? new Date(body.acceptedAt) : new Date();
-  const platform: "LEETCODE" | "PROGRAMMERS" = body.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";
-
-  // solveLog upsert: 신규면 삽입, 이미 있으면 기존 행을 재사용 (항상 id 확보)
-  const inserted = await db
-    .insert(schema.solveLogs)
-    .values({
+  const result = await ensureTransaction(async (tx) => {
+    const stored = await appendSubmissionEvent(tx, {
       userId: tok.userId,
-      platform,
+      platform: body.platform,
       problemSlug: body.problemSlug,
-      problemTitle: body.problemTitle ?? null,
-      difficulty: body.difficulty ?? null,
+      problemTitle: body.problemTitle,
+      difficulty: body.difficulty,
       acceptedAt,
       source: "EXTENSION",
-    })
-    .onConflictDoNothing({
-      target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
-    })
-    .returning({ id: schema.solveLogs.id });
+      verificationLevel: "EXTENSION_VERIFIED",
+      eventKey: submissionEventKey({
+        userId: tok.userId,
+        platform: body.platform,
+        problemSlug: body.problemSlug,
+        acceptedAt,
+        source: "EXTENSION",
+      }),
+      code: body.code,
+      language: body.language,
+    });
+    await tx.update(schema.extensionTokens).set({ lastUsedAt: new Date() }).where(eq(schema.extensionTokens.id, tok.id));
+    return stored;
+  });
 
-  let solveId = inserted[0]?.id;
-  const isNew = inserted.length > 0;
-  if (!solveId) {
-    const [existing] = await db
-      .select({ id: schema.solveLogs.id })
-      .from(schema.solveLogs)
-      .where(
-        and(
-          eq(schema.solveLogs.userId, tok.userId),
-          eq(schema.solveLogs.platform, platform),
-          eq(schema.solveLogs.problemSlug, body.problemSlug),
-        ),
-      )
-      .limit(1);
-    solveId = existing?.id;
-  }
-
-  // 코드가 오면 저장/갱신 (재업로드 시 최신 코드로 업데이트) — solveLog 당 1개
-  let codeSaved = false;
-  if (solveId && body.code) {
-    await db
-      .insert(schema.submissions)
-      .values({
-        solveLogId: solveId,
-        language: body.language ?? null,
-        code: String(body.code),
-        submittedAt: acceptedAt,
-      })
-      .onConflictDoUpdate({
-        target: schema.submissions.solveLogId,
-        set: { language: body.language ?? null, code: String(body.code), submittedAt: acceptedAt },
-      });
-    codeSaved = true;
-  }
-
-  await db
-    .update(schema.extensionTokens)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(schema.extensionTokens.id, tok.id));
-
-  return NextResponse.json({ ok: true, isNew, codeSaved }, { status: 200 });
+  return NextResponse.json({ ok: true, isNew: result.isNew, codeSaved: result.codeSaved }, { status: 200 });
 }
 
 export async function OPTIONS() {

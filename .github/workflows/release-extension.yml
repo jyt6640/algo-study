@@ -13,6 +13,14 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Verify application
+        run: npm ci && npm test && npm exec tsc -- --noEmit && npm run build
+      - name: Verify tag version
+        run: node -e "const v=require('./extension/manifest.json').version; if (process.env.GITHUB_REF_NAME !== 'ext-v'+v) throw new Error('tag/version mismatch: '+process.env.GITHUB_REF_NAME+' vs '+v)"
       - name: Package extension
         run: |
           cd extension

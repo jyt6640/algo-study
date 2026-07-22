@@ -8,8 +8,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
     GitHub({
-      // 풀이 레포 연동(생성/커밋/워크플로우/라벨)을 위해 repo·workflow 스코프 요청
-      authorization: { params: { scope: "read:user user:email repo workflow" } },
+      authorization: { params: { scope: "read:user user:email" } },
     }),
   ],
   callbacks: {
@@ -21,7 +20,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const nickname = login || (profile.name as string) || "user";
 
         const existing = await db
-          .select({ id: schema.users.id, handle: schema.users.leetcodeHandle })
+          .select({ id: schema.users.id, handle: schema.users.leetcodeHandle, role: schema.users.role })
           .from(schema.users)
           .where(eq(schema.users.githubId, githubId))
           .limit(1);
@@ -29,7 +28,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         let dbUserId: number;
         let currentHandle: string | null = null;
 
-        const githubToken = (account.access_token as string) ?? null;
+        const bootstrapAdmin = Boolean(process.env.ADMIN_GITHUB_ID?.trim()) && process.env.ADMIN_GITHUB_ID?.trim() === githubId;
 
         if (existing.length) {
           dbUserId = existing[0].id;
@@ -41,7 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               image: (profile.avatar_url as string) ?? null,
               email: (profile.email as string) ?? null,
               githubLogin: login || null,
-              ...(githubToken ? { githubToken } : {}),
+              ...(bootstrapAdmin ? { role: "ADMIN" as const } : {}),
             })
             .where(eq(schema.users.id, dbUserId));
         } else {
@@ -54,7 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               image: (profile.avatar_url as string) ?? null,
               email: (profile.email as string) ?? null,
               githubLogin: login || null,
-              githubToken,
+              role: bootstrapAdmin ? "ADMIN" : "USER",
             })
             .returning({ id: schema.users.id });
           dbUserId = created.id;

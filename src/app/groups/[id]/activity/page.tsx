@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 const sourceLabel: Record<string, string> = {
   LEETCODE_GQL: "폴링",
   EXTENSION: "확장",
+  IMPORT: "가져오기",
   MANUAL: "수동",
 };
 

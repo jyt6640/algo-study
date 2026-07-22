@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { fmtDateTime } from "@/lib/format";
@@ -26,7 +26,8 @@ export default async function SolvePage({
     .from(schema.groups)
     .where(eq(schema.groups.id, groupId))
     .limit(1);
-  const tz = group?.timezone ?? "Asia/Seoul";
+  if (!group) notFound();
+  const tz = group.timezone;
 
   const viewerId = await currentUserId();
   if (!(await getMembership(viewerId, groupId))) return <MembersOnly groupId={groupId} />;
@@ -44,6 +45,13 @@ export default async function SolvePage({
     })
     .from(schema.solveLogs)
     .innerJoin(schema.users, eq(schema.users.id, schema.solveLogs.userId))
+    .innerJoin(
+      schema.memberships,
+      and(
+        eq(schema.memberships.userId, schema.solveLogs.userId),
+        eq(schema.memberships.groupId, groupId),
+      ),
+    )
     .where(eq(schema.solveLogs.id, sid))
     .limit(1);
   if (!solve) notFound();

@@ -1,27 +1,27 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { fetchRecentAcSubmissions } from "@/lib/leetcode";
+import { appendSubmissionEvent, ensureTransaction, submissionEventKey } from "@/lib/ledger";
 
 /** LeetCode 최근 Accepted 를 폴링해 solveLogs 에 upsert. 새로 넣은 개수 반환. */
 export async function refreshLeetcode(userId: number, handle: string): Promise<number> {
   const subs = await fetchRecentAcSubmissions(handle, 20);
   let inserted = 0;
   for (const s of subs) {
-    const res = await db
-      .insert(schema.solveLogs)
-      .values({
+    const acceptedAt = new Date(s.timestamp * 1000);
+    const result = await ensureTransaction((tx) =>
+      appendSubmissionEvent(tx, {
         userId,
         platform: "LEETCODE",
         problemSlug: s.problemSlug,
         problemTitle: s.problemTitle,
-        acceptedAt: new Date(s.timestamp * 1000),
-        source: "LEETCODE_GQL",
-      })
-      .onConflictDoNothing({
-        target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
-      })
-      .returning({ id: schema.solveLogs.id });
-    if (res.length) inserted++;
+        acceptedAt,
+        source: "CRON",
+        verificationLevel: "SERVER_VERIFIED",
+        eventKey: submissionEventKey({ userId, platform: "LEETCODE", problemSlug: s.problemSlug, acceptedAt, source: "CRON" }),
+      }),
+    );
+    if (result.isNew) inserted++;
   }
   await db.update(schema.users).set({ leetcodeSyncedAt: new Date() }).where(eq(schema.users.id, userId));
   return inserted;

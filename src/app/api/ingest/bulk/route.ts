@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hashToken } from "@/lib/tokens";
+import { appendSubmissionEvent, ensureTransaction, submissionEventKey } from "@/lib/ledger";
+import { bulkPayloadSchema, readJsonBody } from "@/lib/ingestValidation";
 
 export const runtime = "nodejs";
 
@@ -20,81 +22,43 @@ export async function POST(req: NextRequest) {
     .limit(1);
   if (!tok) return NextResponse.json({ error: "유효하지 않은 토큰입니다." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  const platform: "LEETCODE" | "PROGRAMMERS" = body?.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";
-  const problems: Array<{
-    slug: string;
-    title?: string;
-    acceptedAt?: string;
-    difficulty?: string;
-    code?: string;
-    language?: string;
-  }> = Array.isArray(body?.problems) ? body.problems : [];
-  if (problems.length === 0) {
-    return NextResponse.json({ error: "problems 배열이 필요합니다." }, { status: 400 });
-  }
-  if (problems.length > 3000) {
-    return NextResponse.json({ error: "한 번에 3000개까지만 가능합니다." }, { status: 400 });
-  }
+  const bodyResult = await readJsonBody(req);
+  if (!bodyResult.ok) return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+  const parsed = bulkPayloadSchema.safeParse(bodyResult.value);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
 
-  const now = new Date();
-  let inserted = 0;
-  let withCode = 0;
-  for (const p of problems) {
-    const slug = typeof p?.slug === "string" ? p.slug.trim() : "";
-    if (!slug) continue;
-    const acceptedAt = p.acceptedAt ? new Date(p.acceptedAt) : now;
-    const at = Number.isNaN(acceptedAt.getTime()) ? now : acceptedAt;
-
-    // solveLog upsert (항상 id 확보)
-    const ins = await db
-      .insert(schema.solveLogs)
-      .values({
+  const result = await ensureTransaction(async (tx) => {
+    let inserted = 0;
+    let withCode = 0;
+    for (const p of parsed.data.problems) {
+      const at = p.acceptedAt ? new Date(p.acceptedAt) : new Date();
+      const stored = await appendSubmissionEvent(tx, {
         userId: tok.userId,
-        platform,
-        problemSlug: slug,
-        problemTitle: p.title ?? null,
-        difficulty: p.difficulty ?? null,
+        platform: parsed.data.platform,
+        problemSlug: p.slug,
+        problemTitle: p.title,
+        difficulty: p.difficulty,
         acceptedAt: at,
-        source: "EXTENSION",
-      })
-      .onConflictDoNothing({
-        target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
-      })
-      .returning({ id: schema.solveLogs.id });
-    let solveId = ins[0]?.id;
-    if (ins.length) inserted++;
-    else {
-      const [ex] = await db
-        .select({ id: schema.solveLogs.id })
-        .from(schema.solveLogs)
-        .where(
-          and(
-            eq(schema.solveLogs.userId, tok.userId),
-            eq(schema.solveLogs.platform, platform),
-            eq(schema.solveLogs.problemSlug, slug),
-          ),
-        )
-        .limit(1);
-      solveId = ex?.id;
+        source: "IMPORT",
+        verificationLevel: "IMPORTED",
+        eventKey: submissionEventKey({
+          userId: tok.userId,
+          platform: parsed.data.platform,
+          problemSlug: p.slug,
+          acceptedAt: at,
+          source: "IMPORT",
+        }),
+        code: p.code,
+        language: p.language,
+      });
+      if (stored.isNew) inserted++;
+      if (stored.codeSaved) withCode++;
     }
+    await tx.update(schema.extensionTokens).set({ lastUsedAt: new Date() }).where(eq(schema.extensionTokens.id, tok.id));
+    return { inserted, withCode };
+  });
 
-    // 코드가 오면 저장/갱신 (solveLog 당 1개)
-    const code = typeof p.code === "string" ? p.code.slice(0, 200_000) : "";
-    if (solveId && code) {
-      await db
-        .insert(schema.submissions)
-        .values({ solveLogId: solveId, language: p.language ?? null, code, submittedAt: at })
-        .onConflictDoUpdate({
-          target: schema.submissions.solveLogId,
-          set: { language: p.language ?? null, code, submittedAt: at },
-        });
-      withCode++;
-    }
-  }
-
-  await db.update(schema.extensionTokens).set({ lastUsedAt: now }).where(eq(schema.extensionTokens.id, tok.id));
-  return NextResponse.json({ ok: true, received: problems.length, inserted, withCode });
+  return NextResponse.json({ ok: true, received: parsed.data.problems.length, ...result });
 }
 
 export async function OPTIONS() {

@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
@@ -25,13 +25,21 @@ export default async function MemberPage({
   if (!Number.isFinite(groupId) || !Number.isFinite(userId)) notFound();
 
   const [group] = await db.select().from(schema.groups).where(eq(schema.groups.id, groupId)).limit(1);
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1);
-  if (!group || !user) notFound();
+  if (!group) notFound();
 
-  // 프라이버시: 그룹 멤버만 열람
   const viewerId = await currentUserId();
   const viewerMembership = await getMembership(viewerId, groupId);
   if (!viewerMembership) return <MembersOnly groupId={groupId} />;
+
+  const [targetMembership] = await db
+    .select({ userId: schema.memberships.userId })
+    .from(schema.memberships)
+    .where(and(eq(schema.memberships.groupId, groupId), eq(schema.memberships.userId, userId)))
+    .limit(1);
+  if (!targetMembership) notFound();
+
+  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+  if (!user) notFound();
 
   const { start, end, periodOf: weekOf } = currentPeriod(new Date(), group);
 

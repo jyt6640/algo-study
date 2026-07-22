@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { fetchUserProfile } from "@/lib/leetcode";
 import { currentUserId } from "@/lib/session";
+import { handlePayloadSchema, readJsonBody } from "@/lib/ingestValidation";
 
 export const runtime = "nodejs";
 
@@ -25,10 +26,11 @@ export async function POST(req: NextRequest) {
   const userId = await currentUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  const handle = typeof body?.handle === "string" ? body.handle.trim() : "";
-  const platform: "LEETCODE" | "PROGRAMMERS" = body?.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";
-  if (!handle) return NextResponse.json({ error: "handle 이 필요합니다." }, { status: 400 });
+  const bodyResult = await readJsonBody(req);
+  if (!bodyResult.ok) return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+  const parsed = handlePayloadSchema.safeParse(bodyResult.value);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
+  const { handle, platform } = parsed.data;
 
   if (platform === "PROGRAMMERS") {
     await db.update(schema.users).set({ programmersHandle: handle }).where(eq(schema.users.id, userId));

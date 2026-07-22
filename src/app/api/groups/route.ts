@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { generateInviteCode } from "@/lib/tokens";
 import { currentUserId } from "@/lib/session";
+import { groupCreateSchema } from "@/lib/groupValidation";
+import { readJsonBody } from "@/lib/ingestValidation";
+import { appendMembershipEvent, ensureTransaction } from "@/lib/ledger";
+import { currentPeriod } from "@/lib/week";
 
 export const runtime = "nodejs";
 
@@ -10,41 +14,52 @@ export async function POST(req: NextRequest) {
   const userId = await currentUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  if (!body?.name) {
-    return NextResponse.json({ error: "name 이 필요합니다." }, { status: 400 });
-  }
+  const bodyResult = await readJsonBody(req);
+  if (!bodyResult.ok) return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+  const parsed = groupCreateSchema.safeParse(bodyResult.value);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
+  const body = parsed.data;
+  const quota = body.quota;
+  const periodDays = body.periodDays;
+  const penaltyType = body.penaltyType;
+  const penaltyAmount = body.penaltyAmount;
+  const startDate = body.startDate ?? null;
+  const endDate = body.endDate ?? null;
 
-  const quota = Math.max(1, Number(body.quota ?? 7));
-  const periodDays = Math.max(1, Number(body.periodDays ?? 7));
-  const penaltyType: "FIXED" | "PER_MISSING" = body.penaltyType === "PER_MISSING" ? "PER_MISSING" : "FIXED";
-  const penaltyAmount = Math.max(0, Number(body.penaltyAmount ?? 10000));
-  const dateOnly = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
-  const startDate = dateOnly(body.startDate);
-  const endDate = dateOnly(body.endDate);
-
-  const [group] = await db
-    .insert(schema.groups)
-    .values({
-      name: body.name,
-      inviteCode: generateInviteCode(),
-      quota,
-      periodDays,
-      // 주기가 7일이 아니거나 시작일을 지정하면 startDate 로 기준을 잡는다 (7일 기본은 legacy 주단위 유지)
-      startDate: startDate ?? (periodDays !== 7 ? new Date().toISOString().slice(0, 10) : null),
-      endDate,
-      penaltyType,
-      penaltyAmount,
-      accountBank: body.accountBank ?? null,
-      accountNumber: body.accountNumber ?? null,
-      accountHolder: body.accountHolder ?? null,
-    })
-    .returning();
-
-  await db.insert(schema.memberships).values({
-    userId,
-    groupId: group.id,
-    role: "OWNER",
+  const group = await ensureTransaction(async (tx) => {
+    const [created] = await tx
+      .insert(schema.groups)
+      .values({
+        name: body.name,
+        inviteCode: generateInviteCode(),
+        quota,
+        periodDays,
+        startDate: startDate ?? (periodDays !== 7 ? new Date().toISOString().slice(0, 10) : null),
+        endDate,
+        penaltyType,
+        penaltyAmount,
+        accountBank: body.accountBank ?? null,
+        accountNumber: body.accountNumber ?? null,
+        accountHolder: body.accountHolder ?? null,
+      })
+      .returning();
+    const joinedAt = new Date();
+    await tx.insert(schema.memberships).values({ userId, groupId: created.id, role: "OWNER", joinedAt });
+    await appendMembershipEvent(tx, { groupId: created.id, userId, type: "JOINED", effectiveAt: joinedAt, actorUserId: userId });
+    const period = currentPeriod(new Date(), created);
+    if (!period.ended) {
+      await tx.insert(schema.studyPeriods).values({
+        groupId: created.id,
+        periodOf: period.periodOf,
+        startAt: period.start,
+        endAt: period.end,
+        quota: created.quota,
+        penaltyType: created.penaltyType,
+        penaltyAmount: created.penaltyAmount,
+        timezone: created.timezone,
+      });
+    }
+    return created;
   });
 
   return NextResponse.json({ group }, { status: 201 });

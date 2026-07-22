@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 
-export function GithubLink({ groupId, repo }: { groupId: number; repo: string | null }) {
+export function GithubLink({ groupId, repo, installationId }: { groupId: number; repo: string | null; installationId: string | null }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"new" | "existing">(repo ? "existing" : "new");
   const [value, setValue] = useState(repo ?? "");
-  const [priv, setPriv] = useState(false);
+  const [appInstallationId, setAppInstallationId] = useState(installationId ?? "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -20,7 +18,7 @@ export function GithubLink({ groupId, repo }: { groupId: number; repo: string | 
       const res = await fetch(`/api/groups/${groupId}/github`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, repo: value.trim(), private: priv }),
+        body: JSON.stringify({ mode: "existing", repo: value.trim(), installationId: appInstallationId.trim() }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "연동 실패");
@@ -45,18 +43,8 @@ export function GithubLink({ groupId, repo }: { groupId: number; repo: string | 
     <section className="card p-6">
       <h2 className="text-lg font-semibold">GitHub 풀이 레포</h2>
       <p className="mt-1 text-sm text-secondary">
-        연동하면 레포에 <b>PR 템플릿</b>과 <b>자동 라벨링</b>(플랫폼·알고리즘·해결여부)이 설치돼요. PR을 올리면
-        제목·본문·변경 폴더로 라벨이 자동으로 달립니다. <b>본인 소유(또는 push 권한) 레포</b>만 연결돼요.
-      </p>
-      <button
-        onClick={() => signIn("github", { callbackUrl: window.location.href })}
-        className="mt-3 rounded-full border px-3 py-1 text-xs text-secondary hover:bg-[var(--surface-2)]"
-        style={{ borderColor: "var(--border)" }}
-      >
-        GitHub 레포 권한 허용 (재인증)
-      </button>
-      <p className="mt-1 text-xs text-secondary">
-        &quot;레포 권한이 없어요&quot; 오류가 나면 위 버튼으로 재인증해 GitHub 레포 접근을 허용하세요.
+        GitHub App을 레포에 설치한 뒤 선택한 레포에 <b>PR 템플릿</b>과 <b>자동 라벨링</b>을 설치해요. OAuth 토큰은
+        레포 작업에 사용하지 않습니다.
       </p>
 
       {repo && (
@@ -68,39 +56,27 @@ export function GithubLink({ groupId, repo }: { groupId: number; repo: string | 
         </p>
       )}
 
-      <div className="mt-4 flex gap-2 text-sm">
-        <button
-          onClick={() => setMode("new")}
-          className={`rounded-full border px-3 py-1 ${mode === "new" ? "accent" : "text-secondary"}`}
-          style={{ borderColor: mode === "new" ? "var(--accent)" : "var(--border)" }}
-        >
-          새로 만들기
-        </button>
-        <button
-          onClick={() => setMode("existing")}
-          className={`rounded-full border px-3 py-1 ${mode === "existing" ? "accent" : "text-secondary"}`}
-          style={{ borderColor: mode === "existing" ? "var(--accent)" : "var(--border)" }}
-        >
-          기존 레포 연결
-        </button>
-      </div>
-
-      <div className="mt-3 flex gap-2">
+      <div className="mt-4 flex gap-2">
         <input
           className="input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={mode === "new" ? "새 레포 이름 (예: algorithm-study)" : "owner/repo 또는 GitHub URL"}
+          placeholder="owner/repo 또는 GitHub URL"
         />
         <button onClick={setup} disabled={busy} className="btn btn-primary shrink-0">
           {busy ? "설정 중…" : repo ? "다시 설정" : "연동"}
         </button>
       </div>
-      {mode === "new" && (
-        <label className="mt-2 flex items-center gap-2 text-sm text-secondary">
-          <input type="checkbox" checked={priv} onChange={(e) => setPriv(e.target.checked)} /> 비공개 레포로 생성
-        </label>
-      )}
+      <label className="mt-2 block text-xs text-secondary">
+        GitHub App 설치 ID
+        <input
+          className="input mt-1"
+          value={appInstallationId}
+          onChange={(e) => setAppInstallationId(e.target.value)}
+          placeholder="예: 12345678"
+          inputMode="numeric"
+        />
+      </label>
 
       {msg && (
         <p className="mt-3 text-sm" style={{ color: msg.ok ? "var(--success)" : "var(--danger)" }}>

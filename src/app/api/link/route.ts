@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hashToken } from "@/lib/tokens";
+import { linkPayloadSchema, readJsonBody } from "@/lib/ingestValidation";
 
 export const runtime = "nodejs";
 
@@ -19,9 +20,11 @@ export async function POST(req: NextRequest) {
     .limit(1);
   if (!tok) return NextResponse.json({ error: "유효하지 않은 토큰입니다." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  const handle = typeof body?.handle === "string" ? body.handle.trim() : "";
-  if (!handle) return NextResponse.json({ error: "handle 이 필요합니다." }, { status: 400 });
+  const bodyResult = await readJsonBody(req);
+  if (!bodyResult.ok) return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+  const parsed = linkPayloadSchema.safeParse(bodyResult.value);
+  if (!parsed.success) return NextResponse.json({ error: "handle 형식이 올바르지 않습니다." }, { status: 400 });
+  const handle = parsed.data.handle;
 
   await db.update(schema.users).set({ leetcodeHandle: handle }).where(eq(schema.users.id, tok.userId));
 

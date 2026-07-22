@@ -43,6 +43,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
     .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
     .where(eq(schema.memberships.groupId, groupId));
 
+  const [installation] = await db
+    .select({ installationId: schema.groupGithubInstallations.installationId })
+    .from(schema.groupGithubInstallations)
+    .where(and(eq(schema.groupGithubInstallations.groupId, groupId), eq(schema.groupGithubInstallations.enabled, true)))
+    .limit(1);
+
   return (
     <main className="rise mx-auto max-w-2xl space-y-5 px-6 py-14">
       <div>
@@ -68,7 +74,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
           discordWebhook: group.discordWebhook ?? "",
         }}
       />
-      <GithubLink groupId={groupId} repo={group.githubRepo} />
+      <GithubLink groupId={groupId} repo={group.githubRepo} installationId={installation?.installationId ?? null} />
       <GroupAdmin groupId={groupId} members={members} />
     </main>
   );

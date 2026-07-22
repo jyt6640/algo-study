@@ -103,7 +103,7 @@ export function currentPeriod(now: Date, g: GroupSchedule): Period {
   const ended = startMs >= endBoundary;
   return {
     start: new Date(startMs),
-    end: new Date(startMs + periodMs),
+    end: new Date(Math.min(startMs + periodMs, endBoundary)),
     periodOf: addDaysStr(g.startDate, index * g.periodDays),
     notStarted,
     ended,
@@ -122,7 +122,7 @@ export function endedPeriods(now: Date, g: GroupSchedule): Array<{ start: Date; 
   const out: Array<{ start: Date; end: Date; periodOf: string }> = [];
   for (let k = 0; k < 3000; k++) {
     const startMs = anchor + k * periodMs;
-    const endMs = startMs + periodMs;
+    const endMs = Math.min(startMs + periodMs, endBoundary);
     if (endMs > now.getTime()) break; // 아직 진행 중
     if (startMs >= endBoundary) break; // 스터디 종료 이후
     out.push({ start: new Date(startMs), end: new Date(endMs), periodOf: addDaysStr(g.startDate, k * g.periodDays) });

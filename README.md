@@ -65,7 +65,7 @@ flowchart LR
 3. **압축해제된 확장 프로그램을 로드** → `manifest.json`이 있는 폴더 선택
 4. 웹 `내 프로필 → 확장 연동 토큰 관리 → 새 토큰 발급` → 복사 → 확장 팝업에 붙여넣고 **저장**
 
-> 최신 확장은 **연동 토큰만** 입력하면 된다(‘API 주소’ 칸 제거, v0.6.3). 확장을 업데이트했다면 열려 있던 LeetCode·프로그래머스 **탭을 새로고침**할 것.
+> 최신 확장은 **연동 토큰만** 입력하면 된다(‘API 주소’ 칸 제거, v0.6.4). 확장을 업데이트했다면 열려 있던 LeetCode·프로그래머스 **탭을 새로고침**할 것.
 > 개발자 모드는 자동 갱신이 안 되므로 새 버전은 zip을 다시 받아 `chrome://extensions`에서 ↻ 새로고침.
 
 ---
@@ -73,7 +73,7 @@ flowchart LR
 ## 🧱 스택
 
 - **Next.js 15 (App Router) + TypeScript + Tailwind v4**
-- **Drizzle ORM + Neon(Postgres)** — 서버리스 HTTP 드라이버
+- **Drizzle ORM + Neon(Postgres)** — 트랜잭션 가능한 WebSocket 드라이버
 - **Vercel Cron** — 수집 + 마감 배치
 - **Chrome 확장 (MV3)** — LeetCode·프로그래머스 Accepted 코드 자동 캡처 (`/extension`)
 
@@ -82,20 +82,21 @@ flowchart LR
 1. **서버 폴링** (`/api/cron/collect`) — LeetCode 비공식 GraphQL `recentAcSubmissionList`. 확장 미설치자도 커버.
 2. **확장 push** (`/api/ingest`, `/api/ingest/bulk`) — 유저 브라우저에서 코드까지 캡처. 비공개 프로필·프로그래머스도 동작.
 
-두 경로 모두 `(platform, problem_slug)` 기준으로 dedup 되어 기간 카운트에 합산된다.
+수집 결과는 append-only 이벤트 원장에 먼저 기록되고, 기존 `solve_logs`/`submissions`는 호환용 projection으로 유지된다. 기간 카운트는 서버·확장 검증 이벤트와 레거시 backfill만 반영하며, 과거 import는 기록으로만 보존된다.
 
 ---
 
 ## 🚀 로컬 실행
 
 ```bash
-cp .env.example .env      # DATABASE_URL(Neon), CRON_SECRET 채우기
+cp .env.example .env
 npm install
-npm run db:push           # 스키마를 DB에 반영
-npm run dev               # http://localhost:3000
+npm run db:migrate
+npm run dev
 ```
 
 - Neon 무료 계정: https://neon.tech 에서 프로젝트 생성 → connection string 복사.
+- `db:migrate`는 기존 레거시 테이블을 보존하면서 원장·기간 테이블을 추가하는 멱등 마이그레이션이다. 운영 DB에는 `db:push`를 사용하지 않는다.
 
 ## 🔌 주요 엔드포인트
 
@@ -113,6 +114,8 @@ npm run dev               # http://localhost:3000
 | — | `/groups/[id]/solve/[solveId]` | 특정 풀이의 정답 코드 열람 |
 
 Cron 엔드포인트는 프로덕션에서 `Authorization: Bearer $CRON_SECRET` 필요.
+
+그룹 삭제는 기존 기록을 보존하기 위해 보관 처리로 동작한다. GitHub 레포 자동화는 GitHub App 설정(`GITHUB_APP_*`)과 선택 저장소 설치가 완료된 경우에만 사용할 수 있으며, 일반 GitHub 로그인에는 레포 권한을 요청하지 않는다.
 
 ## ☁️ 배포 (Vercel)
 

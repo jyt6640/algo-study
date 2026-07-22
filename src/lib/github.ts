@@ -1,5 +1,3 @@
-// GitHub REST API 헬퍼 (사용자 OAuth 토큰 사용).
-
 const API = "https://api.github.com";
 
 async function gh(token: string, path: string, init?: RequestInit) {

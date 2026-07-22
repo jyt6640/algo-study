@@ -33,6 +33,12 @@ describe("currentPeriod (startDate 기준 N일 주기)", () => {
     expect(p.ended).toBe(true);
   });
 
+  it("마지막 기간은 endDate 다음날 경계에서 끝난다", () => {
+    const g = { timezone: KST, periodDays: 7, startDate: "2026-06-01", endDate: "2026-06-30" };
+    const p = currentPeriod(new Date("2026-06-29T03:00:00Z"), g);
+    expect(p.end.toISOString()).toBe("2026-06-30T15:00:00.000Z");
+  });
+
   it("startDate 없으면 legacy 주단위(월~일)", () => {
     const g = { timezone: KST, periodDays: 7, startDate: null, endDate: null };
     const p = currentPeriod(new Date("2026-07-22T03:00:00Z"), g);

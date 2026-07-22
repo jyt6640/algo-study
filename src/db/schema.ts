@@ -11,15 +11,33 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["OWNER", "MEMBER"]);
+export const userRoleEnum = pgEnum("user_role", ["USER", "ADMIN"]);
 export const penaltyTypeEnum = pgEnum("penalty_type", ["FIXED", "PER_MISSING"]);
 export const solveSourceEnum = pgEnum("solve_source", ["LEETCODE_GQL", "EXTENSION", "MANUAL"]);
 export const platformEnum = pgEnum("platform", ["LEETCODE", "PROGRAMMERS"]);
+export const verificationLevelEnum = pgEnum("verification_level", [
+  "SERVER_VERIFIED",
+  "EXTENSION_VERIFIED",
+  "IMPORTED",
+  "MANUAL_PENDING",
+  "LEGACY",
+]);
+export const ledgerSourceEnum = pgEnum("ledger_source", ["CRON", "EXTENSION", "IMPORT", "MANUAL", "LEGACY"]);
+export const membershipEventTypeEnum = pgEnum("membership_event_type", ["JOINED", "LEFT", "KICKED", "PAUSED", "RESUMED"]);
+export const periodStatusEnum = pgEnum("period_status", ["OPEN", "FINALIZING", "FINALIZED"]);
+export const periodResultActionTypeEnum = pgEnum("period_result_action_type", [
+  "CORRECTED",
+  "EXEMPTED",
+  "PAID",
+  "UNPAID",
+]);
 
 export const users = pgTable(
   "users",
   {
     id: serial("id").primaryKey(),
     githubId: text("github_id"), // GitHub OAuth 고유 id (로그인 사용자)
+    role: userRoleEnum("role").notNull().default("USER"),
     nickname: text("nickname").notNull(),
     name: text("name"),
     image: text("image"),
@@ -44,6 +62,7 @@ export const groups = pgTable("groups", {
   startDate: text("start_date"), // 스터디 시작일 YYYY-MM-DD (그룹 tz). null=legacy 주단위
   endDate: text("end_date"), // 스터디 종료일 YYYY-MM-DD (포함). null=무기한
   active: boolean("active").notNull().default(true),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   penaltyType: penaltyTypeEnum("penalty_type").notNull().default("FIXED"),
   penaltyAmount: integer("penalty_amount").notNull().default(10000),
   timezone: text("timezone").notNull().default("Asia/Seoul"),
@@ -57,6 +76,22 @@ export const groups = pgTable("groups", {
   githubRepo: text("github_repo"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const groupGithubInstallations = pgTable(
+  "group_github_installations",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    installationId: text("installation_id").notNull(),
+    repositoryId: text("repository_id").notNull(),
+    repositoryFullName: text("repository_full_name").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("group_github_installations_group_uq").on(t.groupId)],
+);
 
 export const memberships = pgTable(
   "memberships",
@@ -152,4 +187,136 @@ export const weeklyResults = pgTable(
     finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("weekly_user_group_week_uq").on(t.userId, t.groupId, t.weekOf)],
+);
+
+export const submissionEvents = pgTable(
+  "submission_events",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    platform: platformEnum("platform").notNull(),
+    problemSlug: text("problem_slug").notNull(),
+    problemTitle: text("problem_title"),
+    difficulty: text("difficulty"),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    source: ledgerSourceEnum("source").notNull(),
+    verificationLevel: verificationLevelEnum("verification_level").notNull(),
+    providerSubmissionId: text("provider_submission_id"),
+    eventKey: text("event_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("submission_events_event_key_uq").on(t.eventKey),
+    index("submission_events_user_time_idx").on(t.userId, t.acceptedAt),
+    index("submission_events_problem_idx").on(t.userId, t.platform, t.problemSlug),
+  ],
+);
+
+export const submissionCodeVersions = pgTable(
+  "submission_code_versions",
+  {
+    id: serial("id").primaryKey(),
+    eventId: integer("event_id")
+      .notNull()
+      .references(() => submissionEvents.id, { onDelete: "cascade" }),
+    language: text("language"),
+    code: text("code").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("submission_code_versions_event_idx").on(t.eventId, t.createdAt)],
+);
+
+export const membershipEvents = pgTable(
+  "membership_events",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: membershipEventTypeEnum("type").notNull(),
+    effectiveAt: timestamp("effective_at", { withTimezone: true }).notNull(),
+    actorUserId: integer("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("membership_events_group_user_time_idx").on(t.groupId, t.userId, t.effectiveAt)],
+);
+
+export const studyPeriods = pgTable(
+  "study_periods",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    periodOf: text("period_of").notNull(),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    status: periodStatusEnum("status").notNull().default("OPEN"),
+    quota: integer("quota").notNull(),
+    penaltyType: penaltyTypeEnum("penalty_type").notNull(),
+    penaltyAmount: integer("penalty_amount").notNull(),
+    timezone: text("timezone").notNull(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("study_periods_group_period_uq").on(t.groupId, t.periodOf)],
+);
+
+export const periodParticipants = pgTable(
+  "period_participants",
+  {
+    id: serial("id").primaryKey(),
+    periodId: integer("period_id")
+      .notNull()
+      .references(() => studyPeriods.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("period_participants_period_user_uq").on(t.periodId, t.userId)],
+);
+
+export const periodResults = pgTable(
+  "period_results",
+  {
+    id: serial("id").primaryKey(),
+    periodId: integer("period_id")
+      .notNull()
+      .references(() => studyPeriods.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    solvedCount: integer("solved_count").notNull(),
+    metQuota: boolean("met_quota").notNull(),
+    penaltyAmount: integer("penalty_amount").notNull(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("period_results_period_user_uq").on(t.periodId, t.userId)],
+);
+
+export const periodResultActions = pgTable(
+  "period_result_actions",
+  {
+    id: serial("id").primaryKey(),
+    periodResultId: integer("period_result_id")
+      .notNull()
+      .references(() => periodResults.id, { onDelete: "cascade" }),
+    type: periodResultActionTypeEnum("type").notNull(),
+    solvedCount: integer("solved_count"),
+    penaltyAmount: integer("penalty_amount"),
+    reason: text("reason").notNull(),
+    actorUserId: integer("actor_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("period_result_actions_result_time_idx").on(t.periodResultId, t.createdAt)],
 );
