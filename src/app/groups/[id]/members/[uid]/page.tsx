@@ -2,7 +2,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { weekBounds } from "@/lib/week";
+import { currentPeriod } from "@/lib/week";
 import { fmtDateTime, combineHeatmap } from "@/lib/format";
 import { problemUrl, platformLabel } from "@/lib/platform";
 import { fetchFullProfile } from "@/lib/leetcode";
@@ -33,7 +33,7 @@ export default async function MemberPage({
   const viewerMembership = await getMembership(viewerId, groupId);
   if (!viewerMembership) return <MembersOnly groupId={groupId} />;
 
-  const { start, end, weekOf } = weekBounds(new Date(), group.timezone);
+  const { start, end, periodOf: weekOf } = currentPeriod(new Date(), group);
 
   const solves = await db
     .select()
@@ -88,7 +88,7 @@ export default async function MemberPage({
         ) : (
           <span className="text-secondary">미연동</span>
         )}
-        {" · "}이번 주 {thisWeekCount}/{group.quota} · 누적 {solves.length}솔
+        {" · "}이번 기간 {thisWeekCount}/{group.quota} · 누적 {solves.length}솔
       </p>
 
       {profile && (
@@ -140,7 +140,7 @@ export default async function MemberPage({
                         className="rounded-full px-2 py-0.5"
                         style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}
                       >
-                        이번 주
+                        이번 기간
                       </span>
                     )}
                     <span

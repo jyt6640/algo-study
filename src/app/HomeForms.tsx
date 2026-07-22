@@ -22,6 +22,10 @@ export function HomeForms() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.get("name"),
+          periodDays: Number(form.get("periodDays")),
+          quota: Number(form.get("quota")),
+          startDate: form.get("startDate") || undefined,
+          endDate: form.get("endDate") || undefined,
           penaltyType: form.get("penaltyType"),
           penaltyAmount: Number(form.get("penaltyAmount")),
         }),
@@ -70,6 +74,27 @@ export function HomeForms() {
           <div>
             <label className={label}>스터디 이름</label>
             <input name="name" required className={input} placeholder="알고리즘 뿌시기" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>주기(일)</label>
+              <input name="periodDays" type="number" min={1} defaultValue={7} className={input} />
+            </div>
+            <div>
+              <label className={label}>목표(문제)</label>
+              <input name="quota" type="number" min={1} defaultValue={7} className={input} />
+            </div>
+          </div>
+          <p className="-mt-1 text-xs text-secondary">예: 7일에 7문제 / 1일에 1문제 / 3일에 5문제</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>시작일 (선택)</label>
+              <input name="startDate" type="date" className={input} />
+            </div>
+            <div>
+              <label className={label}>종료일 (선택)</label>
+              <input name="endDate" type="date" className={input} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

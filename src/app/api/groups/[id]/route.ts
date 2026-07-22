@@ -52,6 +52,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
   if (typeof body.active === "boolean") patch.active = body.active;
   if (body.quota != null) patch.quota = Math.max(1, Number(body.quota));
+  if (body.periodDays != null) patch.periodDays = Math.max(1, Number(body.periodDays));
+  const dateOnly = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  if ("startDate" in body) patch.startDate = dateOnly(body.startDate);
+  if ("endDate" in body) patch.endDate = dateOnly(body.endDate);
   if (body.penaltyType === "FIXED" || body.penaltyType === "PER_MISSING") patch.penaltyType = body.penaltyType;
   if (body.penaltyAmount != null) patch.penaltyAmount = Math.max(0, Number(body.penaltyAmount));
   if ("accountBank" in body) patch.accountBank = body.accountBank || null;

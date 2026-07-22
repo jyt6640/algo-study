@@ -3,8 +3,8 @@ import { and, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { fetchRecentAcSubmissions } from "@/lib/leetcode";
 import { isAuthorizedCron } from "@/lib/cronAuth";
-import { sendDiscord, isLastDayOfWeek } from "@/lib/notify";
-import { weekBounds } from "@/lib/week";
+import { sendDiscord } from "@/lib/notify";
+import { currentPeriod } from "@/lib/week";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -57,8 +57,11 @@ export async function GET(req: NextRequest) {
     .from(schema.groups)
     .where(and(isNotNull(schema.groups.discordWebhook), eq(schema.groups.active, true)));
   for (const g of groups) {
-    if (!g.discordWebhook || !isLastDayOfWeek(now, g.timezone)) continue;
-    const { start, end } = weekBounds(now, g.timezone);
+    if (!g.discordWebhook) continue;
+    const { start, end, notStarted, ended } = currentPeriod(now, g);
+    // 현재 기간이 24시간 내 마감될 때만 리마인더
+    const hoursLeft = (end.getTime() - now.getTime()) / 3600000;
+    if (notStarted || ended || hoursLeft > 24 || hoursLeft < 0) continue;
     const members = await db
       .select({ nickname: schema.users.nickname, userId: schema.memberships.userId })
       .from(schema.memberships)
@@ -83,7 +86,7 @@ export async function GET(req: NextRequest) {
     if (behind.length) {
       await sendDiscord(
         g.discordWebhook,
-        `⏰ **${g.name}** 오늘 자정 마감! 아직 목표 미달인 분들:\n${behind.join("\n")}`,
+        `⏰ **${g.name}** 곧 마감! 아직 목표(${g.quota}문제) 미달인 분들:\n${behind.join("\n")}`,
       );
       reminded++;
     }

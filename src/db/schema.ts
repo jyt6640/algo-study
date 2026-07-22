@@ -39,7 +39,10 @@ export const groups = pgTable("groups", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   inviteCode: text("invite_code").notNull().unique(),
-  quota: integer("quota").notNull().default(7),
+  quota: integer("quota").notNull().default(7), // 기간당 목표 문제 수
+  periodDays: integer("period_days").notNull().default(7), // 목표 주기(일)
+  startDate: text("start_date"), // 스터디 시작일 YYYY-MM-DD (그룹 tz). null=legacy 주단위
+  endDate: text("end_date"), // 스터디 종료일 YYYY-MM-DD (포함). null=무기한
   active: boolean("active").notNull().default(true),
   penaltyType: penaltyTypeEnum("penalty_type").notNull().default("FIXED"),
   penaltyAmount: integer("penalty_amount").notNull().default(10000),

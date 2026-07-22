@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hashToken } from "@/lib/tokens";
-import { weekBounds } from "@/lib/week";
+import { currentPeriod } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 
 export const runtime = "nodejs";
@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
       penaltyType: schema.groups.penaltyType,
       penaltyAmount: schema.groups.penaltyAmount,
       timezone: schema.groups.timezone,
+      periodDays: schema.groups.periodDays,
+      startDate: schema.groups.startDate,
+      endDate: schema.groups.endDate,
     })
     .from(schema.memberships)
     .innerJoin(schema.groups, eq(schema.groups.id, schema.memberships.groupId))
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
 
   const studies = await Promise.all(
     memberships.map(async (g) => {
-      const { start, end } = weekBounds(new Date(), g.timezone);
+      const { start, end } = currentPeriod(new Date(), g);
       const [{ cnt }] = await db
         .select({ cnt: sql<number>`count(distinct ${schema.solveLogs.problemSlug})::int` })
         .from(schema.solveLogs)

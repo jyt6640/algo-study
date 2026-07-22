@@ -15,9 +15,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "name 이 필요합니다." }, { status: 400 });
   }
 
-  const quota = Number(body.quota ?? 7);
+  const quota = Math.max(1, Number(body.quota ?? 7));
+  const periodDays = Math.max(1, Number(body.periodDays ?? 7));
   const penaltyType: "FIXED" | "PER_MISSING" = body.penaltyType === "PER_MISSING" ? "PER_MISSING" : "FIXED";
-  const penaltyAmount = Number(body.penaltyAmount ?? 10000);
+  const penaltyAmount = Math.max(0, Number(body.penaltyAmount ?? 10000));
+  const dateOnly = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const startDate = dateOnly(body.startDate);
+  const endDate = dateOnly(body.endDate);
 
   const [group] = await db
     .insert(schema.groups)
@@ -25,6 +29,10 @@ export async function POST(req: NextRequest) {
       name: body.name,
       inviteCode: generateInviteCode(),
       quota,
+      periodDays,
+      // 주기가 7일이 아니거나 시작일을 지정하면 startDate 로 기준을 잡는다 (7일 기본은 legacy 주단위 유지)
+      startDate: startDate ?? (periodDays !== 7 ? new Date().toISOString().slice(0, 10) : null),
+      endDate,
       penaltyType,
       penaltyAmount,
       accountBank: body.accountBank ?? null,

@@ -2,7 +2,7 @@ import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { weekBounds } from "@/lib/week";
+import { currentPeriod } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
@@ -56,7 +56,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     : [];
   const viewerLinked = Boolean(viewer?.leetcode || viewer?.programmers);
 
-  const { start, end, weekOf } = weekBounds(new Date(), group.timezone);
+  const { start, end, periodOf: weekOf, notStarted, ended } = currentPeriod(new Date(), group);
 
   const members = await db
     .select({ userId: schema.memberships.userId, nickname: schema.users.nickname, role: schema.memberships.role })
@@ -136,14 +136,31 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             )}
           </h1>
           <p className="mt-2 text-sm text-secondary">
-            이번 주 ({weekOf} 시작) · 마감까지{" "}
-            <b style={{ color: "var(--text)" }}>
-              {daysLeft}일 {hoursLeft}시간
-            </b>
+            {ended ? (
+              <b style={{ color: "var(--text)" }}>스터디 종료</b>
+            ) : notStarted ? (
+              <>
+                시작 예정 · <b style={{ color: "var(--text)" }}>{weekOf}부터</b>
+              </>
+            ) : (
+              <>
+                이번 기간 ({weekOf} 시작) · 마감까지{" "}
+                <b style={{ color: "var(--text)" }}>
+                  {daysLeft}일 {hoursLeft}시간
+                </b>
+              </>
+            )}
           </p>
           <p className="mt-1 text-xs text-secondary">
-            목표 {group.quota}솔 · 벌금 {group.penaltyType === "FIXED" ? "미달 시" : "부족 문제당"}{" "}
-            {group.penaltyAmount.toLocaleString()}원
+            {group.periodDays}일마다 {group.quota}문제 · 벌금{" "}
+            {group.penaltyType === "FIXED" ? "미달 시" : "부족 문제당"} {group.penaltyAmount.toLocaleString()}원
+            {group.startDate && (
+              <span>
+                {" · "}
+                {group.startDate}
+                {group.endDate ? ` ~ ${group.endDate}` : " ~"}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">

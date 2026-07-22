@@ -7,6 +7,9 @@ type Initial = {
   name: string;
   active: boolean;
   quota: number;
+  periodDays: number;
+  startDate: string;
+  endDate: string;
   penaltyType: "FIXED" | "PER_MISSING";
   penaltyAmount: number;
   accountBank: string;
@@ -68,9 +71,19 @@ export function SettingsForm({ groupId, initial }: { groupId: number; initial: I
               style={{ width: 18, height: 18 }}
             />
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">주간 목표(솔)</label>
+              <label className="field-label">주기(일)</label>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                value={form.periodDays}
+                onChange={(e) => set("periodDays", Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="field-label">목표(문제)</label>
               <input
                 className="input"
                 type="number"
@@ -79,6 +92,21 @@ export function SettingsForm({ groupId, initial }: { groupId: number; initial: I
                 onChange={(e) => set("quota", Number(e.target.value))}
               />
             </div>
+          </div>
+          <p className="-mt-1 text-xs text-secondary">
+            예: 7일에 7문제 / 1일에 1문제 / 3일에 5문제. 7일·시작일 미지정이면 매주 월~일 기준.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">시작일 (선택)</label>
+              <input className="input" type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} />
+            </div>
+            <div>
+              <label className="field-label">종료일 (선택)</label>
+              <input className="input" type="date" value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">벌금 방식</label>
               <select
