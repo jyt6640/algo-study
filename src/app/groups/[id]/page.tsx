@@ -7,6 +7,8 @@ import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
 import { maybeRefreshLeetcode } from "@/lib/refresh";
+import { currentUserIsAdmin } from "@/lib/admin";
+import { MembersOnly } from "@/components/MembersOnly";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerEntry } from "./LedgerEntry";
 import { LeaveButton } from "./LeaveButton";
@@ -34,6 +36,10 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     : [];
   const isOwner = viewerMembership?.role === "OWNER";
   const isMember = Boolean(viewerMembership);
+  const admin = await currentUserIsAdmin();
+
+  // 비멤버는 대시보드 접근 불가 (관리자는 예외). 초대코드로 참여해야 함.
+  if (!isMember && !admin) return <MembersOnly groupId={groupId} />;
 
   const [viewer] = viewerId
     ? await db
@@ -135,10 +141,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="card px-4 py-3 text-right">
-            <div className="text-xs text-secondary">초대코드</div>
-            <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
-          </div>
+          {isOwner && (
+            <div className="card px-4 py-3 text-right">
+              <div className="text-xs text-secondary">초대코드 (방장만)</div>
+              <div className="accent font-mono text-xl font-semibold tracking-widest">{group.inviteCode}</div>
+            </div>
+          )}
           <div className="flex gap-3 text-sm">
             <Link href={`/groups/${groupId}/activity`} className="text-secondary hover:underline">
               활동
@@ -262,7 +270,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         </p>
       </section>
 
-      {isMember ? (
+      {isMember && (
         <>
           {!viewerLinked && (
             <Link
@@ -275,13 +283,6 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
           )}
           <MemberPanel groupId={groupId} viewerId={viewerId!} />
         </>
-      ) : (
-        <section className="card mt-10 p-6 text-center">
-          <p className="text-sm text-secondary">
-            이 스터디의 멤버가 아니에요. 초대코드 <b className="accent">{group.inviteCode}</b> 로 참여하면
-            진행 상황을 함께 관리할 수 있어요.
-          </p>
-        </section>
       )}
     </main>
   );

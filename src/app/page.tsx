@@ -4,7 +4,6 @@ import { auth, signIn, signOut } from "@/auth";
 import { db, schema } from "@/db";
 import { HomeForms } from "./HomeForms";
 import { PlatformLink } from "@/components/PlatformLink";
-import { DiscoverJoin } from "./DiscoverJoin";
 import { currentUserIsAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
@@ -142,7 +141,7 @@ export default async function Home() {
                   {s.name}
                   {s.role === "OWNER" && <span className="accent text-xs">방장</span>}
                 </div>
-                <span className="font-mono text-sm tracking-widest text-secondary">{s.inviteCode} →</span>
+                <span className="text-sm text-secondary">→</span>
               </Link>
             ))}
           </div>
@@ -152,17 +151,18 @@ export default async function Home() {
       {discover.length > 0 && (
         <section className="mt-10">
           <h2 className="text-xl font-semibold">둘러보기</h2>
-          <p className="mt-1 text-sm text-secondary">지금 활성화된 스터디예요. 바로 참여할 수 있어요.</p>
+          <p className="mt-1 text-sm text-secondary">
+            지금 활성화된 스터디예요. 참여하려면 멤버에게 <b>초대코드</b>를 받아 아래에서 입력하세요.
+          </p>
           <div className="mt-4 space-y-2">
             {discover.map((d) => (
               <div key={d.groupId} className="card flex items-center justify-between p-4">
-                <Link href={`/groups/${d.groupId}`} className="min-w-0">
-                  <div className="truncate font-medium hover:underline">{d.name}</div>
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{d.name}</div>
                   <div className="text-xs text-secondary">
                     멤버 {d.memberCount}명 · 주 {d.quota}솔
                   </div>
-                </Link>
-                <DiscoverJoin groupId={d.groupId} />
+                </div>
               </div>
             ))}
           </div>
