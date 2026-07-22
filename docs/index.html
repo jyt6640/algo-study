@@ -1,0 +1,462 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><title>7일 7솔 사용법 가이드</title>
+<style>
+  :root{
+    --paper:#FBFBF7; --card:#FFFFFF; --ink:#16261C; --ink-soft:#4A5A50;
+    --line:#E4E8E0; --line-2:#EDF0EA;
+    --grass:#2FA463; --grass-deep:#1F7D4A; --grass-wash:#EAF6EF;
+    --lc:#F09417; --lc-wash:#FDF1DF;      /* LeetCode 주황 */
+    --pg:#2C6EF5; --pg-wash:#E7EEFF;      /* 프로그래머스 파랑 */
+    --warn:#E4572E; --warn-wash:#FBEBE4;  /* 벌금/주의 */
+    --shadow:0 1px 2px rgba(16,32,22,.05), 0 12px 30px rgba(16,32,22,.07);
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",Pretendard,"Malgun Gothic",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0E140F; --card:#161E18; --ink:#EAF1EA; --ink-soft:#9DB0A2;
+      --line:#26322A; --line-2:#1E271F;
+      --grass:#48C97F; --grass-deep:#7BE0A5; --grass-wash:#15271C;
+      --lc:#F6A93B; --lc-wash:#2A2113;
+      --pg:#6C9BFF; --pg-wash:#141E33;
+      --warn:#F5794F; --warn-wash:#2A1710;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#FBFBF7; --card:#FFFFFF; --ink:#16261C; --ink-soft:#4A5A50;
+    --line:#E4E8E0; --line-2:#EDF0EA;
+    --grass:#2FA463; --grass-deep:#1F7D4A; --grass-wash:#EAF6EF;
+    --lc:#F09417; --lc-wash:#FDF1DF; --pg:#2C6EF5; --pg-wash:#E7EEFF;
+    --warn:#E4572E; --warn-wash:#FBEBE4;
+    --shadow:0 1px 2px rgba(16,32,22,.05), 0 12px 30px rgba(16,32,22,.07);
+  }
+  :root[data-theme="dark"]{
+    --paper:#0E140F; --card:#161E18; --ink:#EAF1EA; --ink-soft:#9DB0A2;
+    --line:#26322A; --line-2:#1E271F;
+    --grass:#48C97F; --grass-deep:#7BE0A5; --grass-wash:#15271C;
+    --lc:#F6A93B; --lc-wash:#2A2113; --pg:#6C9BFF; --pg-wash:#141E33;
+    --warn:#F5794F; --warn-wash:#2A1710;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+  .wrap{max-width:920px;margin:0 auto;padding:0 22px}
+  h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.2}
+  a{color:var(--grass-deep)}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--grass-deep)}
+
+  /* ---------- HERO ---------- */
+  .hero{padding:76px 0 34px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;z-index:0;
+    background:radial-gradient(120% 90% at 88% -10%, var(--grass-wash) 0%, transparent 55%);}
+  .hero .wrap{position:relative;z-index:1}
+  .brandmark{display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:15px}
+  .brandmark .grid7{display:grid;grid-template-columns:repeat(4,7px);grid-template-rows:repeat(2,7px);gap:2px}
+  .brandmark .grid7 i{background:var(--line);border-radius:2px}
+  .brandmark .grid7 i.on{background:var(--grass)}
+  .hero h1{font-size:clamp(34px,6vw,56px);font-weight:800;margin:20px 0 0}
+  .hero h1 .hl{color:var(--grass-deep)}
+  .hero p.sub{font-size:clamp(16px,2.3vw,19px);color:var(--ink-soft);max-width:56ch;margin:16px 0 0}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .tag{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:650;
+    padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card)}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.lc{background:var(--lc)} .dot.pg{background:var(--pg)} .dot.g{background:var(--grass)}
+
+  /* ---------- QUICKSTART STRIP ---------- */
+  .quick{margin:40px 0 8px}
+  .quick .qgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .qstep{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px;box-shadow:var(--shadow)}
+  .qstep .n{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--grass-deep)}
+  .qstep h4{margin:8px 0 4px;font-size:15px}
+  .qstep p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+  @media(max-width:720px){.quick .qgrid{grid-template-columns:repeat(2,1fr)}.brandmark .grid7{display:none}}
+
+  /* ---------- SECTION ---------- */
+  section.step{padding:46px 0;border-top:1px solid var(--line-2)}
+  .step-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+  .step-num{font-family:var(--mono);font-weight:700;font-size:14px;color:#fff;background:var(--grass);
+    width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;transform:translateY(4px)}
+  .step-head h2{font-size:clamp(22px,3.4vw,30px);margin:0}
+  .step-lead{color:var(--ink-soft);font-size:15.5px;max-width:60ch;margin:2px 0 26px}
+  .cols{display:grid;grid-template-columns:1.05fr .95fr;gap:30px;align-items:start}
+  .cols.rev{grid-template-columns:.95fr 1.05fr}
+  @media(max-width:760px){.cols,.cols.rev{grid-template-columns:1fr;gap:22px}}
+
+  ol.dolist,ul.dolist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px}
+  ol.dolist li{position:relative;padding-left:34px;font-size:15px}
+  ol.dolist{counter-reset:d}
+  ol.dolist li::before{counter-increment:d;content:counter(d);position:absolute;left:0;top:1px;
+    width:23px;height:23px;border-radius:7px;background:var(--grass-wash);color:var(--grass-deep);
+    font-family:var(--mono);font-size:12px;font-weight:700;display:grid;place-items:center}
+  ul.dolist li{position:relative;padding-left:26px;font-size:14.5px}
+  ul.dolist li::before{content:"";position:absolute;left:6px;top:9px;width:7px;height:7px;border-radius:50%;background:var(--grass)}
+  .k{font-family:var(--mono);font-size:.88em;background:var(--line-2);padding:2px 7px;border-radius:6px;border:1px solid var(--line);white-space:nowrap}
+  .btnk{display:inline-block;font-size:13px;font-weight:650;padding:3px 10px;border-radius:8px;color:#fff;background:var(--grass)}
+  .btnk.lc{background:var(--lc)} .btnk.pg{background:var(--pg)}
+
+  /* callout */
+  .note{border-radius:14px;padding:14px 16px;font-size:14px;margin-top:18px;border:1px solid var(--line)}
+  .note.tip{background:var(--grass-wash);border-color:transparent}
+  .note.warn{background:var(--warn-wash);border-color:transparent}
+  .note b{color:var(--ink)}
+  .note .lbl{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-right:6px}
+  .note.tip .lbl{color:var(--grass-deep)} .note.warn .lbl{color:var(--warn)}
+
+  /* ---------- MOCK WINDOW ---------- */
+  .mock{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .mock .bar{display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line-2);background:linear-gradient(var(--line-2),transparent)}
+  .mock .bar .tl{display:flex;gap:6px}
+  .mock .bar .tl i{width:11px;height:11px;border-radius:50%;background:var(--line);display:block}
+  .mock .bar .url{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:6px;
+    background:var(--paper);padding:4px 10px;border-radius:7px;border:1px solid var(--line);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .mock .body{padding:18px}
+  .mtitle{font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;margin-top:10px;font-size:13.5px}
+  .mrow .r{display:flex;align-items:center;gap:9px}
+  .avatar{width:26px;height:26px;border-radius:50%;flex:none;background:conic-gradient(from 200deg,var(--grass),var(--pg),var(--lc),var(--grass))}
+  .pill{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+  .pill.ok{background:var(--grass-wash);color:var(--grass-deep)}
+  .pill.mid{background:var(--lc-wash);color:var(--lc)}
+  .pill.bad{background:var(--warn-wash);color:var(--warn)}
+  .field{display:flex;gap:8px;margin-top:12px}
+  .field input{flex:1;font-family:var(--mono);font-size:12px;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+  .field .cp{font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:9px;background:var(--ink);color:var(--paper);white-space:nowrap}
+  .mbtn{width:100%;text-align:center;font-weight:700;font-size:13.5px;padding:11px;border-radius:11px;margin-top:12px;color:#fff;background:var(--grass)}
+  .mbtn.lc{background:var(--lc)} .mbtn.pg{background:var(--pg)} .mbtn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .cap{font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:10px}
+
+  /* extension popup mock */
+  .ext{max-width:320px;margin:0 auto}
+  .ext .head{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;padding:2px 0 12px}
+  .toast{font-size:12.5px;font-weight:650;padding:9px 12px;border-radius:9px;background:var(--grass-wash);color:var(--grass-deep);margin-top:12px;display:flex;align-items:center;gap:8px}
+
+  /* grass heatmap */
+  .grass-grid{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin-top:12px}
+  .grass-grid i{aspect-ratio:1;border-radius:3px;background:var(--line-2)}
+  .grass-grid i.l1{background:color-mix(in srgb,var(--grass) 30%,var(--line-2))}
+  .grass-grid i.l2{background:color-mix(in srgb,var(--grass) 60%,var(--line-2))}
+  .grass-grid i.l3{background:var(--grass)}
+
+  /* ---------- FLOW TRACK ---------- */
+  .flow{border-radius:18px;padding:22px;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
+  .flow.lc{border-top:4px solid var(--lc)}
+  .flow.pg{border-top:4px solid var(--pg)}
+  .flow h3{margin:2px 0 4px;font-size:19px;display:flex;align-items:center;gap:9px}
+  .flow .who{font-size:12.5px;color:var(--ink-soft);margin:0 0 16px}
+  .chain{display:flex;flex-direction:column;gap:0}
+  .node{display:flex;gap:13px;align-items:flex-start}
+  .node .ic{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center;font-size:15px;font-weight:800;color:#fff}
+  .lc .node .ic{background:var(--lc)} .pg .node .ic{background:var(--pg)}
+  .node .tx{padding-bottom:16px}
+  .node .tx b{font-size:14.5px}
+  .node .tx p{margin:2px 0 0;font-size:13px;color:var(--ink-soft)}
+  .connector{width:30px;display:flex;justify-content:center}
+  .connector .ln{width:2px;height:16px;background:var(--line);margin:-8px 0}
+  .lc .connector .ln{background:color-mix(in srgb,var(--lc) 45%,var(--line))}
+  .pg .connector .ln{background:color-mix(in srgb,var(--pg) 45%,var(--line))}
+  .branch{margin-top:6px;padding:12px 14px;border-radius:12px;font-size:13px;background:var(--paper);border:1px dashed var(--line)}
+  .branch b{display:block;margin-bottom:2px}
+
+  /* two flow side by side */
+  .flows{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.flows{grid-template-columns:1fr}}
+
+  /* faq */
+  .faq{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  @media(max-width:640px){.faq{grid-template-columns:1fr}}
+  .faq .q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 17px}
+  .faq .q b{display:block;font-size:14.5px;margin-bottom:5px}
+  .faq .q p{margin:0;font-size:13.5px;color:var(--ink-soft)}
+
+  /* install method cards */
+  .methods{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:26px}
+  @media(max-width:760px){.methods{grid-template-columns:1fr}}
+  .method{border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--card);box-shadow:var(--shadow);position:relative}
+  .method .badge{position:absolute;top:16px;right:16px;font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:999px}
+  .method.easy .badge{background:var(--grass-wash);color:var(--grass-deep)}
+  .method.dev .badge{background:var(--lc-wash);color:var(--lc)}
+  .method h3{margin:0 0 2px;font-size:18px}
+  .method .m-sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px}
+  .dl{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;text-decoration:none;color:#fff;background:var(--grass);padding:9px 15px;border-radius:10px;margin-top:2px}
+  .dl.lc{background:var(--lc)}
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+  .sw{width:34px;height:19px;border-radius:999px;background:var(--grass);position:relative;flex:none}
+  .sw::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+  .exbar{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:1px solid var(--line-2);font-size:12.5px;font-weight:700}
+  .exact{display:flex;gap:8px;padding:14px;flex-wrap:wrap}
+  .exact .b{font-size:12px;font-weight:700;padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--paper)}
+  .exact .b.p{background:var(--grass);color:#fff;border-color:transparent}
+  .excard{display:flex;align-items:center;gap:11px;padding:13px 14px;border:1px solid var(--line);border-radius:11px;margin:14px}
+  .excard .ico{width:34px;height:34px;border-radius:8px;background:var(--grass-wash);display:grid;place-items:center;font-size:16px}
+  footer{padding:44px 0 70px;border-top:1px solid var(--line-2);color:var(--ink-soft);font-size:13px}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+</style>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="brandmark"><span class="grid7"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>7일 7솔</span>
+    <h1>풀면 잔디, 못 풀면 <span class="hl">벌금.</span><br>그 사이 모든 건 자동입니다.</h1>
+    <p class="sub">LeetCode·프로그래머스에서 문제를 정답 처리하면 확장이 코드를 감지해 스터디에 올려줘요. 이 가이드는 <b>처음 설치부터 자동 업로드, 정산 확인</b>까지 순서대로 보여줍니다.</p>
+    <div class="legend">
+      <span class="tag"><span class="dot g"></span>웹에서 하는 일</span>
+      <span class="tag"><span class="dot lc"></span>LeetCode 흐름</span>
+      <span class="tag"><span class="dot pg"></span>프로그래머스 흐름</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap quick">
+  <span class="eyebrow">3분 요약 · 딱 이 순서</span>
+  <div class="qgrid" style="margin-top:14px">
+    <div class="qstep"><div class="n">STEP 1</div><h4>깃허브로 로그인</h4><p>가입 절차 없이 GitHub 계정으로 바로 시작.</p></div>
+    <div class="qstep"><div class="n">STEP 2</div><h4>스터디 참여·개설</h4><p>초대 코드로 참여하거나 방을 새로 만들어요.</p></div>
+    <div class="qstep"><div class="n">STEP 3–4</div><h4>확장 설치 + 토큰</h4><p>웹스토어 또는 개발자 모드로 설치, 아이디 연동 후 토큰 붙여넣기.</p></div>
+    <div class="qstep"><div class="n">STEP 4</div><h4>그냥 문제 풀기</h4><p>정답 뜨면 코드가 알아서 스터디에 올라갑니다.</p></div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">1</span><h2>깃허브로 로그인</h2></div>
+  <p class="step-lead">별도 회원가입이 없어요. 홈에서 <b>GitHub으로 시작하기</b>를 누르면 끝. 프로필·닉네임은 깃허브에서 가져옵니다.</p>
+  <div class="cols">
+    <div>
+      <ol class="dolist">
+        <li>홈 <span class="k">algo-study-eight.vercel.app</span> 접속</li>
+        <li><span class="btnk">GitHub으로 시작하기</span> 클릭 → 권한 허용</li>
+        <li>돌아오면 우측 상단에 내 프로필이 보여요</li>
+      </ol>
+      <div class="note tip"><span class="lbl">Tip</span> 한 번 로그인해두면 <b>초대 코드 없이도</b> 내가 속한 스터디에 계속 들어갈 수 있어요. <span class="k">내 프로필 → 내 스터디</span></div>
+    </div>
+    <div class="mock">
+      <div class="bar"><div class="tl"><i></i><i></i><i></i></div><div class="url">algo-study-eight.vercel.app</div></div>
+      <div class="body" style="text-align:center;padding:34px 22px">
+        <div style="font-weight:800;font-size:20px">7일 7솔</div>
+        <p style="color:var(--ink-soft);font-size:13px;margin:8px 0 20px">일주일에 7문제, 못 채우면 벌금.</p>
+        <div class="mbtn" style="background:#1b1f23">GitHub으로 시작하기</div>
+        <div class="cap">가입 없이 3초 시작</div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- STEP 2 -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">2</span><h2>스터디에 참여하거나, 방을 만들기</h2></div>
+  <p class="step-lead">이미 초대받았다면 <b>초대 코드</b>로 참여하고, 내가 스터디장이면 <b>새 스터디</b>를 만들어 규칙을 정합니다.</p>
+  <div class="cols rev">
+    <div class="mock">
+      <div class="bar"><div class="tl"><i></i><i></i><i></i></div><div class="url">/groups/join</div></div>
+      <div class="body">
+        <div class="mtitle">스터디 참여</div>
+        <div class="field"><input value="초대 코드 입력 (예: A7F3K9)"><span class="cp">참여</span></div>
+        <div style="height:1px;background:var(--line);margin:18px 0"></div>
+        <div class="mtitle">내가 방장이라면</div>
+        <div class="mbtn ghost">+ 새 스터디 만들기</div>
+        <div class="cap">기간 · 목표 개수 · 벌금 · 계좌를 직접 설정</div>
+      </div>
+    </div>
+    <div>
+      <ul class="dolist">
+        <li><b>참여</b> — 방장에게 받은 초대 코드를 넣으면 바로 멤버가 돼요.</li>
+        <li><b>개설</b> — 이름, <span class="k">N일에 M개</span>, 시작·종료일, 벌금·계좌를 정합니다.</li>
+        <li>다른 사람의 활성 스터디는 <b>운영 방식만</b> 보여요 — 초대 코드·정산 계좌는 안 보입니다.</li>
+      </ul>
+      <div class="note tip"><span class="lbl">방장</span> “7일 7솔”은 이름일 뿐 — <b>3일에 2개</b>, <b>2주에 10개</b>처럼 원하는 규칙으로 바꿀 수 있어요. <span class="k">설정</span>에서 언제든 수정.</div>
+    </div>
+  </div>
+</div></section>
+
+<!-- STEP 3: INSTALL -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">3</span><h2>확장 설치하기 — 두 가지 방법</h2></div>
+  <p class="step-lead">코드까지 자동 업로드하려면 크롬 확장이 필요해요. <b>가장 쉬운 웹스토어</b> 또는 <b>GitHub 릴리스에서 개발자 모드</b>로 설치할 수 있습니다.</p>
+
+  <div class="methods">
+    <div class="method easy">
+      <span class="badge">가장 쉬움</span>
+      <h3>A · 크롬 웹스토어</h3>
+      <p class="m-sub">설치 후 <b>자동 업데이트</b>까지 알아서.</p>
+      <ol class="dolist">
+        <li>크롬 웹스토어에서 <b>“7일 7솔”</b> 검색</li>
+        <li><span class="btnk">Chrome에 추가</span> → 확인</li>
+        <li>새 버전은 크롬이 <b>자동으로</b> 갱신</li>
+      </ol>
+      <div class="note warn" style="margin-top:14px"><span class="lbl">참고</span> 새 버전이 <b>심사 중</b>이면 스토어 반영이 늦을 수 있어요. 최신 기능을 바로 쓰려면 오른쪽 <b>개발자 모드</b>로 설치하세요.</div>
+    </div>
+
+    <div class="method dev">
+      <span class="badge">최신 · 심사 대기 없음</span>
+      <h3>B · 개발자 모드 (릴리스)</h3>
+      <p class="m-sub">GitHub 릴리스의 압축본을 직접 로드.</p>
+      <a class="dl lc" href="https://github.com/jyt6640/algo-study/releases/latest/download/algo-study-extension.zip">⬇ 최신 확장 zip 내려받기</a>
+      <div class="cap" style="text-align:left;margin-top:8px">또는 릴리스 페이지에서 <span class="k">algo-study-extension.zip</span> 다운로드 →<br><a href="https://github.com/jyt6640/algo-study/releases/latest">github.com/jyt6640/algo-study/releases/latest</a></div>
+    </div>
+  </div>
+
+  <div class="cols rev">
+    <div class="mock">
+      <div class="bar"><div class="tl"><i></i><i></i><i></i></div><div class="url">chrome://extensions</div></div>
+      <div class="exbar"><span>확장 프로그램</span><span class="toggle">개발자 모드 <span class="sw"></span></span></div>
+      <div class="exact">
+        <span class="b p">압축해제된 확장 프로그램을 로드</span>
+        <span class="b">확장 프로그램 압축</span>
+        <span class="b">업데이트</span>
+      </div>
+      <div class="excard">
+        <div class="ico">🌱</div>
+        <div><div style="font-weight:700;font-size:13.5px">7일 7솔 업로더</div><div style="font-size:11.5px;color:var(--ink-soft)">v0.6.3 · 사용 설정됨</div></div>
+      </div>
+    </div>
+    <div>
+      <span class="eyebrow" style="color:var(--ink-soft)">개발자 모드 설치 순서</span>
+      <ol class="dolist" style="margin-top:12px">
+        <li>내려받은 <span class="k">algo-study-extension.zip</span> <b>압축 해제</b></li>
+        <li>주소창에 <span class="k">chrome://extensions</span> 입력해 이동</li>
+        <li>우측 상단 <b>개발자 모드</b> 스위치를 <b>켜기</b></li>
+        <li><span class="btnk">압축해제된 확장 프로그램을 로드</span> 클릭</li>
+        <li>압축 푼 폴더(<span class="k">manifest.json</span>이 있는 폴더) 선택</li>
+        <li>툴바 퍼즐 아이콘에서 <b>📌 고정</b>하면 끝</li>
+      </ol>
+      <div class="note warn"><span class="lbl">폴더 주의</span> 파일이 아니라 <b>폴더</b>를 골라야 해요. 폴더 안에 <span class="k">manifest.json</span>이 바로 보이는 위치를 선택하세요.</div>
+      <div class="note tip"><span class="lbl">업데이트</span> 개발자 모드는 <b>자동 갱신이 안 돼요.</b> 새 버전이 나오면 zip을 다시 받아 압축 풀고 <span class="k">chrome://extensions</span>에서 <b>↻ 새로고침</b>하거나 다시 로드하세요. (자동 갱신을 원하면 웹스토어 설치)</div>
+    </div>
+  </div>
+</div></section>
+
+<!-- STEP 4: LINK + TOKEN -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">4</span><h2>플랫폼 연동 + 확장 토큰</h2></div>
+  <p class="step-lead">확장을 깔았으면 <b>① 내 아이디를 연동</b>하고, <b>② 확장에 연동 토큰</b>을 넣으세요. 그 다음부턴 손 댈 일이 없습니다.</p>
+
+  <div class="cols">
+    <div>
+      <span class="eyebrow" style="color:var(--ink-soft)">① 플랫폼 아이디 연동</span>
+      <ol class="dolist" style="margin-top:12px">
+        <li><span class="k">내 프로필 → 플랫폼 연동 관리</span> 열기</li>
+        <li>LeetCode 핸들 / 프로그래머스 아이디 입력 후 연동</li>
+        <li>연동되면 <b>잔디밭 🌱</b>과 통계가 채워져요</li>
+      </ol>
+    </div>
+    <div class="mock">
+      <div class="bar"><div class="tl"><i></i><i></i><i></i></div><div class="url">/me · 플랫폼 연동 관리</div></div>
+      <div class="body">
+        <div class="mrow"><div class="r"><span class="dot lc" style="width:11px;height:11px"></span>LeetCode</div><span class="pill ok">lee215 연동됨</span></div>
+        <div class="mrow"><div class="r"><span class="dot pg" style="width:11px;height:11px"></span>프로그래머스</div><span class="pill ok">연동됨</span></div>
+        <div class="grass-grid">
+          <i></i><i class="l1"></i><i class="l3"></i><i class="l2"></i><i></i><i class="l1"></i><i class="l3"></i><i class="l2"></i><i class="l3"></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l1"></i>
+          <i class="l2"></i><i class="l3"></i><i></i><i class="l1"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i>
+        </div>
+        <div class="cap">칸에 올리면 “7월 21일 · 리트코드 2 · 프로그래머스 1”</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols rev" style="margin-top:30px">
+    <div class="mock ext" style="max-width:340px">
+      <div class="bar"><div class="tl"><i></i><i></i><i></i></div><div class="url">확장 팝업</div></div>
+      <div class="body">
+        <div class="head"><span class="grid7" style="display:grid;grid-template-columns:repeat(4,6px);grid-template-rows:repeat(2,6px);gap:2px"><i style="background:var(--grass);border-radius:1px"></i><i style="background:var(--grass);border-radius:1px"></i><i style="background:var(--grass);border-radius:1px"></i><i style="background:var(--grass);border-radius:1px"></i><i style="background:var(--grass);border-radius:1px"></i><i style="background:var(--grass);border-radius:1px"></i><i style="background:var(--line);border-radius:1px"></i><i style="background:var(--line);border-radius:1px"></i></span>7일 7솔 업로더</div>
+        <div style="font-size:12px;color:var(--ink-soft)">연동 토큰</div>
+        <div class="field"><input value="paste-your-token-here" style="letter-spacing:1px"></div>
+        <div class="mbtn">저장</div>
+        <div class="cap">이제 주소 입력칸 없이 <b>토큰 하나</b>만!</div>
+      </div>
+    </div>
+    <div>
+      <span class="eyebrow" style="color:var(--ink-soft)">② 확장 설치 + 토큰 붙여넣기</span>
+      <ol class="dolist" style="margin-top:12px">
+        <li>확장을 설치했다면(STEP 3) 툴바 아이콘 클릭</li>
+        <li>웹 <span class="k">내 프로필 → 확장 연동 토큰 관리 → 새 토큰 발급</span></li>
+        <li>토큰 <b>복사</b> → 확장 팝업에 붙여넣고 <span class="btnk">저장</span></li>
+      </ol>
+      <div class="note tip"><span class="lbl">New</span> 최신 확장은 <b>API 주소칸을 없앴어요.</b> 이제 <b>연동 토큰</b>만 넣으면 됩니다.</div>
+      <div class="note warn"><span class="lbl">주의</span> 확장을 업데이트했다면, 열려 있던 <b>LeetCode·프로그래머스 탭을 한 번 새로고침</b>하세요. 예전 스크립트가 남아 있으면 “업로드 중”에서 멈출 수 있어요.</div>
+    </div>
+  </div>
+</div></section>
+
+<!-- STEP 5: FLOWS -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">5</span><h2>문제를 푼다 → 코드가 알아서 올라간다</h2></div>
+  <p class="step-lead">준비가 끝나면 평소처럼 문제만 풀면 돼요. 플랫폼별 자동 흐름은 이렇게 동작합니다.</p>
+
+  <div class="flows">
+    <!-- LeetCode -->
+    <div class="flow lc">
+      <h3><span class="dot lc" style="width:12px;height:12px"></span>LeetCode 자동 업로드</h3>
+      <p class="who">leetcode.com 에 로그인된 상태 · 확장 설치됨</p>
+      <div class="chain">
+        <div class="node"><div class="ic">1</div><div class="tx"><b>문제를 풀고 Submit</b><p>평소처럼 제출해요. 확장이 뒤에서 대기 중.</p></div></div>
+        <div class="connector"><div class="ln"></div></div>
+        <div class="node"><div class="ic">2</div><div class="tx"><b>“Accepted” 감지</b><p>정답 처리되는 순간 제출한 코드와 언어를 캡처.</p></div></div>
+        <div class="connector"><div class="ln"></div></div>
+        <div class="node"><div class="ic">3</div><div class="tx"><b>스터디에 자동 업로드</b><p>문제·날짜·코드가 내 스터디 기록에 올라갑니다.</p></div></div>
+      </div>
+      <div class="branch"><b>예전에 푼 것도 가져오기</b>확장 팝업 <span class="btnk lc">LeetCode 최근 풀이 코드 가져오기</span> — 최근 20개를 코드까지. 웹 <span class="k">/me · 내 LeetCode 코드 가져오기</span>도 동일.</div>
+    </div>
+
+    <!-- Programmers -->
+    <div class="flow pg">
+      <h3><span class="dot pg" style="width:12px;height:12px"></span>프로그래머스 자동 업로드</h3>
+      <p class="who">school.programmers.co.kr 로그인 상태 · 확장 설치됨</p>
+      <div class="chain">
+        <div class="node"><div class="ic">1</div><div class="tx"><b>문제를 풀고 채점</b><p>코드 작성 후 “제출 후 채점하기”.</p></div></div>
+        <div class="connector"><div class="ln"></div></div>
+        <div class="node"><div class="ic">2</div><div class="tx"><b>“정답입니다!” 감지</b><p>채점 결과 화면(합계 100/100)을 확장이 인식.</p></div></div>
+        <div class="connector"><div class="ln"></div></div>
+        <div class="node"><div class="ic">3</div><div class="tx"><b>스터디에 자동 업로드</b><p>레벨·날짜·에디터 코드가 함께 기록돼요.</p></div></div>
+      </div>
+      <div class="branch"><b>예전에 푼 것도 가져오기</b>확장 팝업 <span class="btnk pg">프로그래머스 푼 문제 전체 가져오기</span> — 지금까지 푼 목록을 날짜와 함께 한 번에.</div>
+    </div>
+  </div>
+
+  <div class="note tip" style="margin-top:22px"><span class="lbl">중요</span> <b>코드까지</b> 올리려면 확장이 필요해요. 문제 개수·잔디·정답 여부만 보는 건 확장 없이도 연동만으로 동작합니다.</div>
+</div></section>
+
+<!-- STEP 6 -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">6</span><h2>스터디 안에서 확인하기</h2></div>
+  <p class="step-lead">대시보드에서 <b>누가 · 무엇을 · 어떻게(코드)</b> 풀었는지, 이번 기간 목표를 채웠는지, 벌금은 얼마인지 한눈에 봅니다.</p>
+  <div class="cols">
+    <div>
+      <ul class="dolist">
+        <li>멤버별 이번 기간 <b>진행도</b>와 목표 달성 여부</li>
+        <li>문제 칩을 누르면 <b>그 사람의 정답 코드</b>까지 열람</li>
+        <li>목표 미달이면 <b>벌금 원장</b>에 자동 집계 → 오프라인 정산</li>
+        <li>합쳐진 <b>잔디밭</b>으로 스터디 전체 페이스 확인</li>
+      </ul>
+      <div class="note warn"><span class="lbl">벌금</span> 기간이 끝나면 목표를 못 채운 사람에게 설정한 금액이 <b>원장에 기록</b>돼요. 실제 송금·정산은 방장이 등록한 계좌로 오프라인 진행.</div>
+    </div>
+    <div class="mock">
+      <div class="bar"><div class="tl"><i></i><i></i><i></i></div><div class="url">/groups/5 · 대시보드</div></div>
+      <div class="body">
+        <div class="mtitle">하이디라오 <span class="pill mid">3일에 2개</span></div>
+        <div class="mrow"><div class="r"><span class="avatar"></span>흑곰</div><span class="pill ok">2 / 2 달성</span></div>
+        <div class="mrow"><div class="r"><span class="avatar" style="background:conic-gradient(from 20deg,var(--pg),var(--lc))"></span>지민</div><span class="pill mid">1 / 2</span></div>
+        <div class="mrow"><div class="r"><span class="avatar" style="background:conic-gradient(from 120deg,var(--warn),var(--lc))"></span>세연</div><span class="pill bad">0 / 2 · 벌금 3,000</span></div>
+        <div class="cap">이름·문제 칩을 누르면 코드까지 열려요</div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- FAQ -->
+<section class="step"><div class="wrap">
+  <div class="step-head"><span class="step-num">?</span><h2>막힐 때</h2></div>
+  <div class="faq">
+    <div class="q"><b>“업로드 중”에서 멈춰요</b><p>확장 업데이트 직후예요. 문제 <b>탭을 새로고침</b>하고, 안 되면 확장 팝업에서 토큰을 다시 저장해 보세요.</p></div>
+    <div class="q"><b>코드가 안 올라가요</b><p>해당 사이트에 <b>로그인</b>돼 있는지, 팝업에 <b>토큰</b>이 저장돼 있는지 확인하세요. LeetCode는 “Accepted”, 프로그래머스는 “정답입니다!”가 떠야 감지돼요.</p></div>
+    <div class="q"><b>예전 문제를 한 번에 넣고 싶어요</b><p>확장 팝업의 <b>가져오기 버튼</b>을 쓰세요. LeetCode는 최근 20개, 프로그래머스는 전체 목록을 날짜와 함께 올려줘요.</p></div>
+    <div class="q"><b>토큰이 노출된 것 같아요</b><p><span class="k">/me · 확장 연동 토큰 관리</span>에서 <b>폐기</b> 후 새로 발급하고, 확장에 다시 저장하면 됩니다.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>7일 7솔 · 사용법 가이드</span>
+  <span>풀면 잔디 🌱 · 못 풀면 벌금 💸</span>
+</div></footer>
+</body></html>
