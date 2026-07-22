@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
   if (!body?.problemSlug) {
     return NextResponse.json({ error: "problemSlug 가 필요합니다." }, { status: 400 });
   }
+  // 남용 방지: 코드 크기 제한 (200KB)
+  if (typeof body.code === "string" && body.code.length > 200_000) {
+    body.code = body.code.slice(0, 200_000);
+  }
+  if (typeof body.problemSlug !== "string" || body.problemSlug.length > 300) {
+    return NextResponse.json({ error: "problemSlug 가 올바르지 않습니다." }, { status: 400 });
+  }
 
   const acceptedAt = body.acceptedAt ? new Date(body.acceptedAt) : new Date();
   const platform: "LEETCODE" | "PROGRAMMERS" = body.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";

@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
   if (problems.length === 0) {
     return NextResponse.json({ error: "problems 배열이 필요합니다." }, { status: 400 });
   }
+  if (problems.length > 3000) {
+    return NextResponse.json({ error: "한 번에 3000개까지만 가능합니다." }, { status: 400 });
+  }
 
   const now = new Date();
   let inserted = 0;

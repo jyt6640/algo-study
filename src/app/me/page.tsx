@@ -9,6 +9,7 @@ import { ProfileCard } from "@/components/ProfileCard";
 import { Heatmap } from "@/components/Heatmap";
 import { PlatformLink } from "@/components/PlatformLink";
 import { RefreshButton } from "./RefreshButton";
+import { Tokens } from "./Tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,11 @@ export default async function MyProfile() {
         <div className="mt-3">
           <PlatformLink />
         </div>
+      </details>
+
+      <details className="mt-4">
+        <summary className="cursor-pointer text-sm font-semibold">확장 연동 토큰 관리</summary>
+        <Tokens />
       </details>
 
       <section className="mt-10">
