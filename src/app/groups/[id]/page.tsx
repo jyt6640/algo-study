@@ -13,7 +13,7 @@ import { PublicStudy } from "./PublicStudy";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerEntry } from "./LedgerEntry";
 import { LeaveButton } from "./LeaveButton";
-import { CheatReportButton } from "@/components/CheatReportButton";
+import { MemberCheatReport } from "@/components/MemberCheatReport";
 
 export const dynamic = "force-dynamic";
 
@@ -102,21 +102,62 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   const periodPenaltyTotal = rows.reduce((s, r) => s + r.projectedPenalty, 0);
   const behindCount = rows.filter((r) => r.solved < group.quota).length;
 
-  // 이번 기간 풀이들에 대한 치팅 의심 신고 집계
+  // 이번 기간 풀이 → 멤버/제목 매핑 (치팅 신고 집계용)
   const periodSolveIds = rows.flatMap((r) => r.weekSolves.map((s) => s.id));
-  const reportRows = periodSolveIds.length
-    ? await db
-        .select({ solveLogId: schema.cheatReports.solveLogId, reporterId: schema.cheatReports.reporterId })
-        .from(schema.cheatReports)
-        .where(inArray(schema.cheatReports.solveLogId, periodSolveIds))
-    : [];
-  const reportCount = new Map<number, number>();
-  const reportedByViewer = new Set<number>();
-  for (const r of reportRows) {
-    reportCount.set(r.solveLogId, (reportCount.get(r.solveLogId) ?? 0) + 1);
-    if (viewerId && r.reporterId === viewerId) reportedByViewer.add(r.solveLogId);
+  const solveToMember = new Map<number, number>();
+  const solveTitle = new Map<number, string>();
+  for (const r of rows) {
+    for (const s of r.weekSolves) {
+      solveToMember.set(s.id, r.userId);
+      solveTitle.set(s.id, s.title ?? s.slug);
+    }
   }
-  const canSeeReportCount = isOwner || admin;
+  const canSeeReports = isOwner || admin;
+
+  // 내가 이미 신고한 멤버(중복/상태 표시)
+  const viewerReportedMembers = new Set<number>();
+  if (viewerId && periodSolveIds.length) {
+    const mine = await db
+      .select({ solveLogId: schema.cheatReports.solveLogId })
+      .from(schema.cheatReports)
+      .where(
+        and(
+          eq(schema.cheatReports.reporterId, viewerId),
+          inArray(schema.cheatReports.solveLogId, periodSolveIds),
+        ),
+      );
+    for (const m of mine) {
+      const uid = solveToMember.get(m.solveLogId);
+      if (uid) viewerReportedMembers.add(uid);
+    }
+  }
+
+  // 방장/관리자: 멤버별 신고 상세 (문제·이유·신고자)
+  type ReportDetail = { title: string; reason: string | null; reporter: string };
+  const reportsByMember = new Map<number, ReportDetail[]>();
+  if (canSeeReports && periodSolveIds.length) {
+    const details = await db
+      .select({
+        solveLogId: schema.cheatReports.solveLogId,
+        reason: schema.cheatReports.reason,
+        reporter: schema.users.nickname,
+        createdAt: schema.cheatReports.createdAt,
+      })
+      .from(schema.cheatReports)
+      .innerJoin(schema.users, eq(schema.users.id, schema.cheatReports.reporterId))
+      .where(inArray(schema.cheatReports.solveLogId, periodSolveIds))
+      .orderBy(desc(schema.cheatReports.createdAt));
+    for (const d of details) {
+      const uid = solveToMember.get(d.solveLogId);
+      if (!uid) continue;
+      if (!reportsByMember.has(uid)) reportsByMember.set(uid, []);
+      reportsByMember.get(uid)!.push({
+        title: solveTitle.get(d.solveLogId) ?? "",
+        reason: d.reason,
+        reporter: d.reporter,
+      });
+    }
+  }
 
   // 오늘의 LeetCode 문제 (1시간 캐시, 실패해도 무시)
   const daily = await fetchDailyChallenge().catch(() => null);
@@ -276,24 +317,56 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
           return (
             <div key={r.userId} className="card p-5">
               <div className="flex items-center justify-between gap-3">
-                <Link
-                  href={`/groups/${groupId}/members/${r.userId}`}
-                  className="group flex items-center gap-2 font-semibold"
-                >
-                  <span className="group-hover:underline">{r.nickname}</span>
-                  {r.role === "OWNER" && <span className="accent text-xs">방장</span>}
-                  <span className="text-xs text-secondary opacity-0 transition-opacity group-hover:opacity-100">
-                    문제 보기 →
-                  </span>
-                </Link>
-                <div className="text-sm font-medium">
-                  {met ? (
-                    <span style={{ color: "var(--success)" }}>✓ 달성</span>
-                  ) : (
-                    <span style={{ color: "var(--warning)" }}>
-                      예상 벌금 {r.projectedPenalty.toLocaleString()}원
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/groups/${groupId}/members/${r.userId}`}
+                    className="group flex items-center gap-2 font-semibold"
+                  >
+                    <span className="group-hover:underline">{r.nickname}</span>
+                    {r.role === "OWNER" && <span className="accent text-xs">방장</span>}
+                    <span className="text-xs text-secondary opacity-0 transition-opacity group-hover:opacity-100">
+                      문제 보기 →
                     </span>
+                  </Link>
+                  {canSeeReports && (reportsByMember.get(r.userId)?.length ?? 0) > 0 && (
+                    <details className="group/rep">
+                      <summary
+                        className="cursor-pointer list-none rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{ background: "color-mix(in srgb, var(--danger) 15%, transparent)", color: "var(--danger)" }}
+                        title="치팅 의심 신고 보기"
+                      >
+                        🚩 {reportsByMember.get(r.userId)!.length}건
+                      </summary>
+                      <div className="mt-2 space-y-1.5 rounded-xl border p-3 text-xs" style={{ borderColor: "var(--border)" }}>
+                        {reportsByMember.get(r.userId)!.map((rep, i) => (
+                          <div key={i}>
+                            <span className="font-medium">{rep.title}</span>
+                            <span className="text-secondary"> · {rep.reporter} 신고</span>
+                            {rep.reason && <div className="text-secondary">“{rep.reason}”</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isMember && r.userId !== viewerId && r.weekSolves.length > 0 && (
+                    <MemberCheatReport
+                      groupId={groupId}
+                      nickname={r.nickname}
+                      solves={r.weekSolves.map((s) => ({ id: s.id, label: s.title ?? s.slug }))}
+                      alreadyReported={viewerReportedMembers.has(r.userId)}
+                    />
+                  )}
+                  <div className="text-sm font-medium">
+                    {met ? (
+                      <span style={{ color: "var(--success)" }}>✓ 달성</span>
+                    ) : (
+                      <span style={{ color: "var(--warning)" }}>
+                        예상 벌금 {r.projectedPenalty.toLocaleString()}원
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
@@ -314,32 +387,16 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
               {r.weekSolves.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {r.weekSolves.map((s) => (
-                    <span
+                    <Link
                       key={s.id}
-                      className="inline-flex items-center gap-1 rounded-full py-1 pl-2.5 pr-1.5 text-xs"
+                      href={`/groups/${groupId}/solve/${s.id}`}
+                      className="rounded-full px-2.5 py-1 text-xs transition-colors hover:brightness-95"
                       style={{ background: "var(--surface-2)", color: "var(--text)" }}
+                      title="정답 코드 보기"
                     >
-                      <Link
-                        href={`/groups/${groupId}/solve/${s.id}`}
-                        className="transition-colors hover:underline"
-                        title="정답 코드 보기"
-                      >
-                        {s.title ?? s.slug}
-                        <span className="ml-1.5 text-secondary">
-                          {fmtDateTime(s.acceptedAt, group.timezone)}
-                        </span>
-                      </Link>
-                      {isMember && (
-                        <CheatReportButton
-                          groupId={groupId}
-                          solveLogId={s.id}
-                          initialReported={reportedByViewer.has(s.id)}
-                          initialCount={reportCount.get(s.id) ?? 0}
-                          showCount={canSeeReportCount}
-                          canReport={r.userId !== viewerId}
-                        />
-                      )}
-                    </span>
+                      {s.title ?? s.slug}
+                      <span className="ml-1.5 text-secondary">{fmtDateTime(s.acceptedAt, group.timezone)}</span>
+                    </Link>
                   ))}
                 </div>
               )}
