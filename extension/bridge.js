@@ -1,49 +1,19 @@
 // 우리 웹앱 페이지에서 실행되는 브리지.
-// 웹 페이지는 CORS 때문에 leetcode.com 에 직접 접근 못 하므로, 확장이 대신 LeetCode 세션으로
-// 최근 Accepted 풀이의 코드를 가져와 페이지로 돌려준다. (페이지가 그걸 자기 세션으로 서버에 저장)
 
-function gql(query, variables) {
-  return fetch("https://leetcode.com/graphql", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables }),
-  }).then((r) => r.json());
-}
-
-async function fetchLeetcode() {
-  const us = await gql("{ userStatus { isSignedIn username } }");
-  const status = us?.data?.userStatus;
-  if (!status?.isSignedIn || !status.username) {
-    return { error: "leetcode.com 에 로그인돼 있지 않아요. LeetCode 로그인 후 다시 시도하세요." };
-  }
-  const rec = await gql(
-    "query r($u:String!){recentAcSubmissionList(username:$u,limit:20){id title titleSlug timestamp}}",
-    { u: status.username },
-  );
-  const list = rec?.data?.recentAcSubmissionList || [];
-  const problems = [];
-  for (const s of list) {
-    let code = "";
-    let language = "";
+function fetchLeetcode() {
+  return new Promise((resolve) => {
     try {
-      const d = await gql("query d($id:Int!){submissionDetails(submissionId:$id){code lang{name}}}", {
-        id: Number(s.id),
+      chrome.runtime.sendMessage({ type: "ALGOSTUDY_FETCH_LEETCODE" }, (response) => {
+        if (chrome.runtime.lastError) {
+          resolve({ error: "확장을 새로고침했어요. 페이지를 새로고침한 뒤 다시 시도하세요." });
+          return;
+        }
+        resolve(response || { error: "확장에서 응답을 받지 못했어요." });
       });
-      code = d?.data?.submissionDetails?.code || "";
-      language = d?.data?.submissionDetails?.lang?.name || "";
-    } catch (e) {
-      /* noop */
+    } catch (error) {
+      resolve({ error: error instanceof Error ? error.message : "확장과 통신하지 못했어요." });
     }
-    problems.push({
-      slug: s.titleSlug,
-      title: s.title,
-      acceptedAt: new Date(Number(s.timestamp) * 1000).toISOString(),
-      code,
-      language,
-    });
-  }
-  return { problems };
+  });
 }
 
 window.addEventListener("message", async (ev) => {

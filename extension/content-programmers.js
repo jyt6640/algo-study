@@ -67,11 +67,13 @@ let autoUploadedFor = null; // 자동 업로드 중복 방지 (lessonId)
 
 function markPassed() {
   const lesson = currentLesson();
-  lastPassed = { lessonId: lesson, at: new Date().toISOString() };
-  const btn = document.getElementById("algostudy-btn");
-  if (btn) {
-    btn.textContent = "✅ 통과 — 업로드됨";
-    btn.style.background = "#22c55e";
+  if (lastPassed?.lessonId !== lesson) {
+    lastPassed = { lessonId: lesson, at: new Date().toISOString() };
+    const btn = document.getElementById("algostudy-btn");
+    if (btn) {
+      btn.textContent = "✅ 통과 — 업로드됨";
+      btn.style.background = "#22c55e";
+    }
   }
   if (lesson && autoUploadedFor !== lesson) autoUpload(lesson);
 }

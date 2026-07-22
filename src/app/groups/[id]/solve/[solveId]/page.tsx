@@ -7,6 +7,7 @@ import { problemUrl, platformLabel } from "@/lib/platform";
 import { currentUserId } from "@/lib/session";
 import { getMembership } from "@/lib/membership";
 import { MembersOnly } from "@/components/MembersOnly";
+import { ManualCodeEntry } from "@/components/ManualCodeEntry";
 
 export const dynamic = "force-dynamic";
 
@@ -105,9 +106,12 @@ export default async function SolvePage({
         </div>
       ) : (
         <div className="card mt-6 p-6 text-sm text-secondary">
-          아직 이 문제의 코드가 없어요. 확장프로그램으로 <b className="text-[color:var(--text)]">Accepted 후 「📤 스터디 업로드」</b>{" "}
-          하면 정답 코드가 여기에 표시됩니다.
+          아직 이 문제의 코드가 없어요. 아래에 직접 붙여넣어 저장하거나 확장프로그램으로 자동 업로드할 수 있어요.
         </div>
+      )}
+
+      {viewerId === solve.userId && (
+        <ManualCodeEntry solveId={sid} initialCode={code?.code} initialLanguage={code?.language} />
       )}
     </main>
   );
