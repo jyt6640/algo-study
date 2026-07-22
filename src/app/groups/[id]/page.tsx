@@ -14,6 +14,7 @@ import { MemberPanel } from "./MemberPanel";
 import { LedgerEntry } from "./LedgerEntry";
 import { LeaveButton } from "./LeaveButton";
 import { MemberCheatReport } from "@/components/MemberCheatReport";
+import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 
 export const dynamic = "force-dynamic";
 
@@ -132,9 +133,19 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     }
   }
 
-  // 방장/관리자: 멤버별 신고 상세 (문제·이유·신고자)
-  type ReportDetail = { title: string; reason: string | null; reporter: string };
-  const reportsByMember = new Map<number, ReportDetail[]>();
+  // 방장/관리자: 풀이 단위 신고 상세 (문제·신고자·이유) + 멤버별 신고 수
+  const memberNick = new Map<number, string>();
+  for (const r of rows) memberNick.set(r.userId, r.nickname);
+
+  type SolveReport = {
+    solveLogId: number;
+    memberId: number;
+    memberNickname: string;
+    title: string;
+    reporters: Array<{ reporter: string; reason: string | null }>;
+  };
+  const reportsBySolve = new Map<number, SolveReport>();
+  const memberReportCount = new Map<number, number>();
   if (canSeeReports && periodSolveIds.length) {
     const details = await db
       .select({
@@ -150,14 +161,20 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     for (const d of details) {
       const uid = solveToMember.get(d.solveLogId);
       if (!uid) continue;
-      if (!reportsByMember.has(uid)) reportsByMember.set(uid, []);
-      reportsByMember.get(uid)!.push({
-        title: solveTitle.get(d.solveLogId) ?? "",
-        reason: d.reason,
-        reporter: d.reporter,
-      });
+      memberReportCount.set(uid, (memberReportCount.get(uid) ?? 0) + 1);
+      if (!reportsBySolve.has(d.solveLogId)) {
+        reportsBySolve.set(d.solveLogId, {
+          solveLogId: d.solveLogId,
+          memberId: uid,
+          memberNickname: memberNick.get(uid) ?? "",
+          title: solveTitle.get(d.solveLogId) ?? "",
+          reporters: [],
+        });
+      }
+      reportsBySolve.get(d.solveLogId)!.reporters.push({ reporter: d.reporter, reason: d.reason });
     }
   }
+  const reportedSolves = [...reportsBySolve.values()];
 
   // 오늘의 LeetCode 문제 (1시간 캐시, 실패해도 무시)
   const daily = await fetchDailyChallenge().catch(() => null);
@@ -328,25 +345,15 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
                       문제 보기 →
                     </span>
                   </Link>
-                  {canSeeReports && (reportsByMember.get(r.userId)?.length ?? 0) > 0 && (
-                    <details className="group/rep">
-                      <summary
-                        className="cursor-pointer list-none rounded-full px-2 py-0.5 text-[11px] font-medium"
-                        style={{ background: "color-mix(in srgb, var(--danger) 15%, transparent)", color: "var(--danger)" }}
-                        title="치팅 의심 신고 보기"
-                      >
-                        🚩 {reportsByMember.get(r.userId)!.length}건
-                      </summary>
-                      <div className="mt-2 space-y-1.5 rounded-xl border p-3 text-xs" style={{ borderColor: "var(--border)" }}>
-                        {reportsByMember.get(r.userId)!.map((rep, i) => (
-                          <div key={i}>
-                            <span className="font-medium">{rep.title}</span>
-                            <span className="text-secondary"> · {rep.reporter} 신고</span>
-                            {rep.reason && <div className="text-secondary">“{rep.reason}”</div>}
-                          </div>
-                        ))}
-                      </div>
-                    </details>
+                  {canSeeReports && (memberReportCount.get(r.userId) ?? 0) > 0 && (
+                    <a
+                      href="#report-review"
+                      className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                      style={{ background: "color-mix(in srgb, var(--danger) 15%, transparent)", color: "var(--danger)" }}
+                      title="아래 신고 검토에서 확인"
+                    >
+                      🚩 {memberReportCount.get(r.userId)}건
+                    </a>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -404,6 +411,59 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
           );
         })}
       </div>
+
+      {canSeeReports && reportedSolves.length > 0 && (
+        <section id="report-review" className="mt-14">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-xl font-semibold">🚩 신고 검토 (방장)</h2>
+            <span className="text-sm text-secondary">{reportedSolves.length}건</span>
+          </div>
+          <p className="mt-1 text-xs text-secondary">
+            치팅 의심으로 신고된 풀이예요. 검토 후 문제가 있으면 해당 풀이를 취소(삭제)할 수 있어요.
+          </p>
+          <div className="mt-4 space-y-3">
+            {reportedSolves.map((rep) => (
+              <div key={rep.solveLogId} className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/groups/${groupId}/solve/${rep.solveLogId}`}
+                      className="font-semibold hover:underline"
+                    >
+                      {rep.title}
+                    </Link>
+                    <span className="ml-2 text-sm text-secondary">· {rep.memberNickname}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/groups/${groupId}/solve/${rep.solveLogId}`}
+                      className="rounded-full border px-2.5 py-0.5 text-xs hover:bg-[var(--surface-2)]"
+                      style={{ borderColor: "var(--border)" }}
+                    >
+                      코드 보기
+                    </Link>
+                    <DeleteSolveButton
+                      groupId={groupId}
+                      solveId={rep.solveLogId}
+                      label="풀이 취소"
+                      confirmText={`'${rep.title}' 풀이를 취소(삭제)할까요? 이 멤버의 카운트에서 제외되고 코드도 삭제됩니다.`}
+                      variant="danger"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1.5 border-t pt-3 text-xs" style={{ borderColor: "var(--border)" }}>
+                  {rep.reporters.map((rr, i) => (
+                    <div key={i}>
+                      <span className="font-medium">{rr.reporter}</span> 신고
+                      {rr.reason ? <span className="text-secondary"> — “{rr.reason}”</span> : <span className="text-secondary"> (사유 없음)</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-14">
         <div className="flex items-baseline justify-between">

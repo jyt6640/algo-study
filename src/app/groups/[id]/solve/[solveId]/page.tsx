@@ -9,6 +9,7 @@ import { getMembership } from "@/lib/membership";
 import { MembersOnly } from "@/components/MembersOnly";
 import { ManualCodeEntry } from "@/components/ManualCodeEntry";
 import { CodeBlock } from "@/components/CodeBlock";
+import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,18 @@ export default async function SolvePage({
           </>
         )}
       </div>
+
+      {viewerId === solve.userId && (
+        <div className="mt-3">
+          <DeleteSolveButton
+            groupId={groupId}
+            solveId={sid}
+            label="이 풀이 취소"
+            confirmText="이 풀이를 취소(삭제)할까요? 스터디 카운트에서 제외되고 코드도 함께 삭제됩니다."
+            redirectTo={`/groups/${groupId}`}
+          />
+        </div>
+      )}
 
       {code ? (
         <div className="mt-6">

@@ -62,7 +62,7 @@ export function LedgerEntry({
             className="tabular-nums"
             style={{ color: entry.paid ? "var(--success)" : "var(--warning)" }}
           >
-            {entry.penaltyAmount.toLocaleString()}원 {entry.paid ? "· 납부" : "· 미납"}
+            {entry.penaltyAmount.toLocaleString()}원 {entry.paid ? "· 입금확인 ✓" : "· 미입금"}
           </span>
         )}
 
@@ -71,9 +71,10 @@ export function LedgerEntry({
             onClick={() => patch({ paid: !entry.paid })}
             disabled={busy}
             className="rounded-full border px-2 py-0.5 text-xs hover:bg-[var(--surface-2)]"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: entry.paid ? "var(--border)" : "var(--warning)", color: entry.paid ? undefined : "var(--warning)" }}
+            title={entry.paid ? "입금 확인을 취소" : "입금을 받았으면 확인 처리"}
           >
-            {entry.paid ? "미납으로" : "납부 처리"}
+            {entry.paid ? "입금확인 취소" : "입금 확인"}
           </button>
         )}
         {isOwner && !entry.metQuota && (

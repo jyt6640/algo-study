@@ -1,0 +1,50 @@
+import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { currentUserId } from "@/lib/session";
+import { getMembership } from "@/lib/membership";
+
+export const runtime = "nodejs";
+
+// 풀이(solveLog) 취소/삭제.
+// - 본인: 자기 풀이를 취소할 수 있음
+// - 방장: 이 그룹 멤버의 풀이를 (치팅 검토 후) 삭제할 수 있음
+// 삭제 시 연결된 코드(submissions)·신고(cheat_reports)도 FK cascade 로 함께 제거됨.
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string; solveId: string }> },
+) {
+  const userId = await currentUserId();
+  if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+
+  const { id, solveId } = await params;
+  const groupId = Number(id);
+  const sid = Number(solveId);
+  if (!Number.isFinite(groupId) || !Number.isFinite(sid))
+    return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
+
+  const membership = await getMembership(userId, groupId);
+  if (!membership) return NextResponse.json({ error: "멤버가 아니에요." }, { status: 403 });
+
+  const [solve] = await db
+    .select({ userId: schema.solveLogs.userId })
+    .from(schema.solveLogs)
+    .where(eq(schema.solveLogs.id, sid))
+    .limit(1);
+  if (!solve) return NextResponse.json({ error: "풀이를 찾을 수 없어요." }, { status: 404 });
+
+  const isSelf = solve.userId === userId;
+  const isOwner = membership.role === "OWNER";
+  if (!isSelf && !isOwner)
+    return NextResponse.json({ error: "본인 풀이거나 방장만 삭제할 수 있어요." }, { status: 403 });
+
+  // 방장이 남의 풀이를 삭제할 땐, 그 사람이 이 그룹 멤버인지 확인
+  if (!isSelf) {
+    const targetMembership = await getMembership(solve.userId, groupId);
+    if (!targetMembership)
+      return NextResponse.json({ error: "이 그룹 멤버의 풀이가 아니에요." }, { status: 400 });
+  }
+
+  await db.delete(schema.solveLogs).where(eq(schema.solveLogs.id, sid));
+  return NextResponse.json({ ok: true, deletedBy: isSelf ? "self" : "owner" });
+}
