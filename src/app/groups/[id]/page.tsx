@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
@@ -8,7 +8,7 @@ import { currentUserId } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
 import { maybeRefreshLeetcode } from "@/lib/refresh";
 import { currentUserIsAdmin } from "@/lib/admin";
-import { MembersOnly } from "@/components/MembersOnly";
+import { PublicStudy } from "./PublicStudy";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerEntry } from "./LedgerEntry";
 import { LeaveButton } from "./LeaveButton";
@@ -38,8 +38,14 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   const isMember = Boolean(viewerMembership);
   const admin = await currentUserIsAdmin();
 
-  // 비멤버는 대시보드 접근 불가 (관리자는 예외). 초대코드로 참여해야 함.
-  if (!isMember && !admin) return <MembersOnly groupId={groupId} />;
+  // 비멤버는 공개 운영 개요만 (초대코드·정산 계좌·멤버 개인기록은 숨김). 관리자는 예외.
+  if (!isMember && !admin) {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.memberships)
+      .where(eq(schema.memberships.groupId, groupId));
+    return <PublicStudy group={group} memberCount={count ?? 0} />;
+  }
 
   const [viewer] = viewerId
     ? await db

@@ -156,14 +156,19 @@ export default async function Home() {
           </p>
           <div className="mt-4 space-y-2">
             {discover.map((d) => (
-              <div key={d.groupId} className="card flex items-center justify-between p-4">
+              <Link
+                key={d.groupId}
+                href={`/groups/${d.groupId}`}
+                className="card flex items-center justify-between p-4 transition hover:brightness-105"
+              >
                 <div className="min-w-0">
                   <div className="truncate font-medium">{d.name}</div>
                   <div className="text-xs text-secondary">
                     멤버 {d.memberCount}명 · 주 {d.quota}솔
                   </div>
                 </div>
-              </div>
+                <span className="text-sm text-secondary">운영 방식 →</span>
+              </Link>
             ))}
           </div>
         </section>
