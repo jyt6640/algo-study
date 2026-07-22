@@ -6,7 +6,12 @@ import { fetchUserProfile } from "@/lib/leetcode";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-  providers: [GitHub],
+  providers: [
+    GitHub({
+      // 풀이 레포 연동(생성/커밋/워크플로우/라벨)을 위해 repo·workflow 스코프 요청
+      authorization: { params: { scope: "read:user user:email repo workflow" } },
+    }),
+  ],
   callbacks: {
     // 로그인 시 우리 users 테이블에 upsert 하고, DB user id 를 토큰에 담는다.
     async jwt({ token, account, profile }) {
@@ -24,6 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         let dbUserId: number;
         let currentHandle: string | null = null;
 
+        const githubToken = (account.access_token as string) ?? null;
+
         if (existing.length) {
           dbUserId = existing[0].id;
           currentHandle = existing[0].handle;
@@ -33,6 +40,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: (profile.name as string) ?? null,
               image: (profile.avatar_url as string) ?? null,
               email: (profile.email as string) ?? null,
+              githubLogin: login || null,
+              ...(githubToken ? { githubToken } : {}),
             })
             .where(eq(schema.users.id, dbUserId));
         } else {
@@ -44,6 +53,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: (profile.name as string) ?? null,
               image: (profile.avatar_url as string) ?? null,
               email: (profile.email as string) ?? null,
+              githubLogin: login || null,
+              githubToken,
             })
             .returning({ id: schema.users.id });
           dbUserId = created.id;

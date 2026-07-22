@@ -27,6 +27,8 @@ export const users = pgTable(
     leetcodeHandle: text("leetcode_handle"),
     programmersHandle: text("programmers_handle"),
     leetcodeSyncedAt: timestamp("leetcode_synced_at", { withTimezone: true }),
+    githubToken: text("github_token"), // GitHub OAuth access token (레포 연동용)
+    githubLogin: text("github_login"),
     timezone: text("timezone").notNull().default("Asia/Seoul"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -48,6 +50,8 @@ export const groups = pgTable("groups", {
   accountHolder: text("account_holder"),
   // 리마인더·마감 알림을 보낼 Discord 웹훅 (방장이 등록)
   discordWebhook: text("discord_webhook"),
+  // 연동된 GitHub 풀이 레포 ("owner/repo")
+  githubRepo: text("github_repo"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

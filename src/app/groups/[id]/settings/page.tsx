@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { currentUserId } from "@/lib/session";
 import { SettingsForm } from "./SettingsForm";
 import { GroupAdmin } from "./GroupAdmin";
+import { GithubLink } from "./GithubLink";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
           discordWebhook: group.discordWebhook ?? "",
         }}
       />
+      <GithubLink groupId={groupId} repo={group.githubRepo} />
       <GroupAdmin groupId={groupId} members={members} />
     </main>
   );

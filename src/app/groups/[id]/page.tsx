@@ -154,6 +154,16 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             </div>
           )}
           <div className="flex gap-3 text-sm">
+            {group.githubRepo && (
+              <a
+                href={`https://github.com/${group.githubRepo}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-secondary hover:underline"
+              >
+                GitHub
+              </a>
+            )}
             <Link href={`/groups/${groupId}/activity`} className="text-secondary hover:underline">
               활동
             </Link>
