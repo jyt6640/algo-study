@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { HomeForms } from "./HomeForms";
 import { PlatformLink } from "@/components/PlatformLink";
 import { DiscoverJoin } from "./DiscoverJoin";
+import { currentUserIsAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function Home() {
     .where(eq(schema.users.id, userId))
     .limit(1);
   const linked = Boolean(me?.leetcode || me?.programmers);
+  const admin = await currentUserIsAdmin();
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14">
@@ -94,6 +96,11 @@ export default async function Home() {
             )}
             <span className="text-sm font-medium">{session.user.name}</span>
           </Link>
+          {admin && (
+            <Link href="/admin" className="text-sm accent hover:underline">
+              관리자
+            </Link>
+          )}
           <form
             action={async () => {
               "use server";

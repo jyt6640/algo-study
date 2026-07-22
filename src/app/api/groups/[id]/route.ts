@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { currentUserId } from "@/lib/session";
+import { currentUserIsAdmin } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
-// 방장만 그룹 삭제 (멤버십·주간결과는 cascade 로 함께 삭제)
+// 방장 또는 슈퍼관리자만 그룹 삭제 (멤버십·주간결과는 cascade 로 함께 삭제)
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await currentUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
@@ -19,8 +20,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     .from(schema.memberships)
     .where(and(eq(schema.memberships.userId, userId), eq(schema.memberships.groupId, groupId)))
     .limit(1);
-  if (membership?.role !== "OWNER") {
-    return NextResponse.json({ error: "방장만 삭제할 수 있어요." }, { status: 403 });
+  const admin = await currentUserIsAdmin();
+  if (membership?.role !== "OWNER" && !admin) {
+    return NextResponse.json({ error: "방장 또는 관리자만 삭제할 수 있어요." }, { status: 403 });
   }
 
   await db.delete(schema.groups).where(eq(schema.groups.id, groupId));
@@ -41,8 +43,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .from(schema.memberships)
     .where(and(eq(schema.memberships.userId, userId), eq(schema.memberships.groupId, groupId)))
     .limit(1);
-  if (membership?.role !== "OWNER") {
-    return NextResponse.json({ error: "방장만 설정을 바꿀 수 있어요." }, { status: 403 });
+  if (membership?.role !== "OWNER" && !(await currentUserIsAdmin())) {
+    return NextResponse.json({ error: "방장 또는 관리자만 바꿀 수 있어요." }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}));

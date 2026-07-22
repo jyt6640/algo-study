@@ -1,0 +1,24 @@
+name: Release extension
+
+# ext-v* 태그를 밀면 확장 zip 을 만들어 GitHub Release 에 첨부한다.
+#   예) git tag ext-v0.5.0 && git push origin ext-v0.5.0
+on:
+  push:
+    tags: ["ext-v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package extension
+        run: |
+          cd extension
+          zip -r -X ../algo-study-extension.zip . -x '*.md' -x '*.DS_Store'
+      - name: Create/attach release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: algo-study-extension.zip
+          generate_release_notes: true
