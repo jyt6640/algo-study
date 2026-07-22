@@ -1,9 +1,11 @@
 name: Publish extension
 
-# 확장을 Chrome Web Store 에 업로드(선택적으로 게시).
-# Chrome Web Store API 승인 + Secrets 등록 전까지는 수동 실행 전용(자동 트리거 없음).
-# 수동: Actions 탭 → "Publish extension" → Run workflow (publish 체크 시 심사 제출까지)
+# 확장을 Chrome Web Store 에 업로드·게시.
+# - 자동: ext-v* 태그 푸시 → 업로드 + 심사 제출(게시)
+# - 수동: Actions 탭 → Run workflow (publish 체크 시 게시, 해제 시 초안 업로드만)
 on:
+  push:
+    tags: ["ext-v*"]
   workflow_dispatch:
     inputs:
       publish:
@@ -27,7 +29,7 @@ jobs:
           cd ..
           unzip -l algo-study-extension.zip
 
-      - name: Upload to Chrome Web Store
+      - name: Upload & publish to Chrome Web Store
         uses: mnao305/chrome-extension-upload@v5.0.0
         with:
           file-path: algo-study-extension.zip
@@ -35,5 +37,5 @@ jobs:
           client-id: ${{ secrets.CWS_CLIENT_ID }}
           client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
-          # push 로 자동 트리거되면 초안 업로드만, 수동 실행 시 입력값에 따라 게시
-          publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || false }}
+          # 태그 푸시는 게시까지, 수동 실행은 입력값에 따름
+          publish: ${{ github.event_name == 'push' || inputs.publish }}
