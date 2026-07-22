@@ -210,6 +210,9 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             <Link href="/" className="text-secondary hover:underline">
               홈
             </Link>
+            <Link href={`/groups/${groupId}/activity`} className="text-secondary hover:underline">
+              활동
+            </Link>
             <Link href="/me" className="text-secondary hover:underline">
               내 프로필
             </Link>
