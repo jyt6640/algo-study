@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export function GithubLink({ groupId, repo }: { groupId: number; repo: string | null }) {
   const router = useRouter();
@@ -45,7 +46,17 @@ export function GithubLink({ groupId, repo }: { groupId: number; repo: string | 
       <h2 className="text-lg font-semibold">GitHub 풀이 레포</h2>
       <p className="mt-1 text-sm text-secondary">
         연동하면 레포에 <b>PR 템플릿</b>과 <b>자동 라벨링</b>(플랫폼·알고리즘·해결여부)이 설치돼요. PR을 올리면
-        제목·본문·변경 폴더로 라벨이 자동으로 달립니다.
+        제목·본문·변경 폴더로 라벨이 자동으로 달립니다. <b>본인 소유(또는 push 권한) 레포</b>만 연결돼요.
+      </p>
+      <button
+        onClick={() => signIn("github", { callbackUrl: window.location.href })}
+        className="mt-3 rounded-full border px-3 py-1 text-xs text-secondary hover:bg-[var(--surface-2)]"
+        style={{ borderColor: "var(--border)" }}
+      >
+        GitHub 레포 권한 허용 (재인증)
+      </button>
+      <p className="mt-1 text-xs text-secondary">
+        &quot;레포 권한이 없어요&quot; 오류가 나면 위 버튼으로 재인증해 GitHub 레포 접근을 허용하세요.
       </p>
 
       {repo && (

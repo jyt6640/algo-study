@@ -52,6 +52,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (!repo) {
         return NextResponse.json({ error: "레포를 찾을 수 없거나 접근 권한이 없어요." }, { status: 404 });
       }
+      if (!repo.permissions?.push) {
+        return NextResponse.json(
+          { error: "이 레포에 push 권한이 없어요. 본인 레포를 연결하거나 새로 만드세요." },
+          { status: 403 },
+        );
+      }
       fullName = repo.full_name;
     }
 

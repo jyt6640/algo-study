@@ -21,7 +21,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) sendResponse({ ok: false, error: data.error || `HTTP ${res.status}` });
-      else sendResponse({ ok: true, deduped: !!data.deduped });
+      else sendResponse({ ok: true, ...data });
     } catch (e) {
       sendResponse({ ok: false, error: String(e) });
     }

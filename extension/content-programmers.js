@@ -95,23 +95,42 @@ async function autoUpload(lesson) {
     code = c.code;
     language = c.language;
   }
-  chrome.runtime.sendMessage(
+  sendIngest(
     {
-      type: "ALGOSTUDY_INGEST",
-      payload: {
-        platform: "PROGRAMMERS",
-        problemSlug: lesson,
-        problemTitle: problemTitle(),
-        language,
-        code,
-        acceptedAt: (lastPassed && lastPassed.at) || new Date().toISOString(),
-      },
+      platform: "PROGRAMMERS",
+      problemSlug: lesson,
+      problemTitle: problemTitle(),
+      language,
+      code,
+      acceptedAt: (lastPassed && lastPassed.at) || new Date().toISOString(),
     },
-    (res) => {
+    (res, err) => {
       if (res?.ok) toast(res.isNew ? "자동 업로드 ✓" : "코드 업데이트 ✓");
-      else if (res?.error) autoUploadedFor = null;
+      else {
+        autoUploadedFor = null;
+        if (err) toast(err, true);
+      }
     },
   );
+}
+
+// 배경으로 업로드 요청 — 확장 업데이트/무응답/lastError 처리 (콜백 반드시 1회)
+function sendIngest(payload, done) {
+  let settled = false;
+  const finish = (res, err) => {
+    if (settled) return;
+    settled = true;
+    done(res, err);
+  };
+  try {
+    chrome.runtime.sendMessage({ type: "ALGOSTUDY_INGEST", payload }, (res) => {
+      if (chrome.runtime.lastError) return finish(null, "확장을 새로고침했어요. 문제 페이지를 새로고침해 주세요.");
+      finish(res);
+    });
+  } catch (e) {
+    finish(null, "확장이 업데이트됨 — 문제 페이지를 새로고침하세요.");
+  }
+  setTimeout(() => finish(null, "응답이 없어요. API 주소·토큰·네트워크를 확인하세요."), 15000);
 }
 
 const passObserver = new MutationObserver(() => {
@@ -138,23 +157,20 @@ async function doUpload(btn) {
   btn.textContent = "업로드 중…";
   const { code, language } = await captureCode();
 
-  chrome.runtime.sendMessage(
+  sendIngest(
     {
-      type: "ALGOSTUDY_INGEST",
-      payload: {
-        platform: "PROGRAMMERS",
-        problemSlug: lessonId,
-        problemTitle: problemTitle(),
-        language,
-        code,
-        acceptedAt: (passed && lastPassed.at) || new Date().toISOString(),
-      },
+      platform: "PROGRAMMERS",
+      problemSlug: lessonId,
+      problemTitle: problemTitle(),
+      language,
+      code,
+      acceptedAt: (passed && lastPassed.at) || new Date().toISOString(),
     },
-    (res) => {
+    (res, err) => {
       btn.disabled = false;
       btn.textContent = prev;
       if (res?.ok) toast(res.isNew ? "업로드 완료 ✓" : "코드 업데이트 완료 ✓");
-      else toast(res?.error || "업로드 실패", true);
+      else toast(err || res?.error || "업로드 실패", true);
     },
   );
 }

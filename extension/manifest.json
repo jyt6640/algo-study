@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "7일 7솔 — 알고리즘 스터디 업로더",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "LeetCode·프로그래머스에서 정답 처리되면 제출 코드를 자동으로 감지해 스터디에 업로드합니다.",
   "icons": {
     "16": "icons/icon16.png",
