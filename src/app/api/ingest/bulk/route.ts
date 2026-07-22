@@ -22,11 +22,14 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const platform: "LEETCODE" | "PROGRAMMERS" = body?.platform === "PROGRAMMERS" ? "PROGRAMMERS" : "LEETCODE";
-  const problems: Array<{ slug: string; title?: string; acceptedAt?: string; difficulty?: string }> = Array.isArray(
-    body?.problems,
-  )
-    ? body.problems
-    : [];
+  const problems: Array<{
+    slug: string;
+    title?: string;
+    acceptedAt?: string;
+    difficulty?: string;
+    code?: string;
+    language?: string;
+  }> = Array.isArray(body?.problems) ? body.problems : [];
   if (problems.length === 0) {
     return NextResponse.json({ error: "problems 배열이 필요합니다." }, { status: 400 });
   }
@@ -36,11 +39,15 @@ export async function POST(req: NextRequest) {
 
   const now = new Date();
   let inserted = 0;
+  let withCode = 0;
   for (const p of problems) {
     const slug = typeof p?.slug === "string" ? p.slug.trim() : "";
     if (!slug) continue;
     const acceptedAt = p.acceptedAt ? new Date(p.acceptedAt) : now;
-    const res = await db
+    const at = Number.isNaN(acceptedAt.getTime()) ? now : acceptedAt;
+
+    // solveLog upsert (항상 id 확보)
+    const ins = await db
       .insert(schema.solveLogs)
       .values({
         userId: tok.userId,
@@ -48,18 +55,46 @@ export async function POST(req: NextRequest) {
         problemSlug: slug,
         problemTitle: p.title ?? null,
         difficulty: p.difficulty ?? null,
-        acceptedAt: Number.isNaN(acceptedAt.getTime()) ? now : acceptedAt,
+        acceptedAt: at,
         source: "EXTENSION",
       })
       .onConflictDoNothing({
         target: [schema.solveLogs.userId, schema.solveLogs.platform, schema.solveLogs.problemSlug],
       })
       .returning({ id: schema.solveLogs.id });
-    if (res.length) inserted++;
+    let solveId = ins[0]?.id;
+    if (ins.length) inserted++;
+    else {
+      const [ex] = await db
+        .select({ id: schema.solveLogs.id })
+        .from(schema.solveLogs)
+        .where(
+          and(
+            eq(schema.solveLogs.userId, tok.userId),
+            eq(schema.solveLogs.platform, platform),
+            eq(schema.solveLogs.problemSlug, slug),
+          ),
+        )
+        .limit(1);
+      solveId = ex?.id;
+    }
+
+    // 코드가 오면 저장/갱신 (solveLog 당 1개)
+    const code = typeof p.code === "string" ? p.code.slice(0, 200_000) : "";
+    if (solveId && code) {
+      await db
+        .insert(schema.submissions)
+        .values({ solveLogId: solveId, language: p.language ?? null, code, submittedAt: at })
+        .onConflictDoUpdate({
+          target: schema.submissions.solveLogId,
+          set: { language: p.language ?? null, code, submittedAt: at },
+        });
+      withCode++;
+    }
   }
 
   await db.update(schema.extensionTokens).set({ lastUsedAt: now }).where(eq(schema.extensionTokens.id, tok.id));
-  return NextResponse.json({ ok: true, received: problems.length, inserted });
+  return NextResponse.json({ ok: true, received: problems.length, inserted, withCode });
 }
 
 export async function OPTIONS() {

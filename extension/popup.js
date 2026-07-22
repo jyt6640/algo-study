@@ -192,4 +192,86 @@ $("importPg").addEventListener("click", async () => {
   }
 });
 
+// LeetCode 세션으로 최근 Accepted 풀이의 실제 코드를 가져와 일괄 업로드
+$("importLc").addEventListener("click", async () => {
+  const apiBase = $("apiBase").value.trim();
+  const token = $("token").value.trim();
+  const set = $("importLcStatus");
+  set.style.color = "var(--success)";
+  if (!apiBase || !token) {
+    set.style.color = "var(--danger)";
+    set.textContent = "API 주소와 토큰을 먼저 저장하세요.";
+    return;
+  }
+  const gql = (query, variables) =>
+    fetch("https://leetcode.com/graphql", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables }),
+    }).then((r) => r.json());
+
+  try {
+    set.textContent = "LeetCode 로그인 확인 중…";
+    const us = await gql("{ userStatus { isSignedIn username } }");
+    const status = us?.data?.userStatus;
+    if (!status?.isSignedIn || !status.username) {
+      set.style.color = "var(--danger)";
+      set.textContent = "leetcode.com 에 로그인돼 있지 않아요.";
+      return;
+    }
+
+    set.textContent = "최근 풀이 목록 불러오는 중…";
+    const rec = await gql(
+      "query r($u:String!){recentAcSubmissionList(username:$u,limit:20){id title titleSlug timestamp}}",
+      { u: status.username },
+    );
+    const list = rec?.data?.recentAcSubmissionList || [];
+    if (list.length === 0) {
+      set.style.color = "var(--danger)";
+      set.textContent = "가져올 풀이가 없어요.";
+      return;
+    }
+
+    const problems = [];
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      set.textContent = `코드 가져오는 중… ${i + 1}/${list.length}`;
+      let code = "";
+      let language = "";
+      try {
+        const d = await gql("query d($id:Int!){submissionDetails(submissionId:$id){code lang{name}}}", {
+          id: Number(s.id),
+        });
+        code = d?.data?.submissionDetails?.code || "";
+        language = d?.data?.submissionDetails?.lang?.name || "";
+      } catch (e) {
+        /* 코드 조회 실패해도 문제는 반영 */
+      }
+      problems.push({
+        slug: s.titleSlug,
+        title: s.title,
+        acceptedAt: new Date(Number(s.timestamp) * 1000).toISOString(),
+        code,
+        language,
+      });
+    }
+
+    set.textContent = `${problems.length}개 업로드 중…`;
+    const res = await fetch(`${apiBase.replace(/\/$/, "")}/api/ingest/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ platform: "LEETCODE", problems }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    set.style.color = "var(--success)";
+    set.textContent = `완료 ✓ ${out.received}개 반영 (코드 ${out.withCode}개)`;
+    loadDashboard(apiBase, token);
+  } catch (e) {
+    set.style.color = "var(--danger)";
+    set.textContent = "실패: " + (e instanceof Error ? e.message : String(e));
+  }
+});
+
 init();
