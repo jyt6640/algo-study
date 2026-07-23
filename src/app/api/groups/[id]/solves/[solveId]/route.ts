@@ -27,7 +27,11 @@ export async function DELETE(
   if (!membership) return NextResponse.json({ error: "멤버가 아니에요." }, { status: 403 });
 
   const [solve] = await db
-    .select({ userId: schema.solveLogs.userId })
+    .select({
+      userId: schema.solveLogs.userId,
+      platform: schema.solveLogs.platform,
+      slug: schema.solveLogs.problemSlug,
+    })
     .from(schema.solveLogs)
     .where(eq(schema.solveLogs.id, sid))
     .limit(1);
@@ -46,5 +50,21 @@ export async function DELETE(
   }
 
   await db.delete(schema.solveLogs).where(eq(schema.solveLogs.id, sid));
+
+  // 자동 재수집(cron 폴링 / 대량 import)으로 되살아나지 않게 제외 목록에 기록.
+  // 나중에 사용자가 직접(수동 입력/실시간 재풀이) 등록하면 자동 해제된다.
+  await db
+    .insert(schema.excludedSolves)
+    .values({
+      userId: solve.userId,
+      platform: solve.platform,
+      problemSlug: solve.slug,
+      reason: isSelf ? "본인 취소" : "방장 취소",
+      excludedBy: userId,
+    })
+    .onConflictDoNothing({
+      target: [schema.excludedSolves.userId, schema.excludedSolves.platform, schema.excludedSolves.problemSlug],
+    });
+
   return NextResponse.json({ ok: true, deletedBy: isSelf ? "self" : "owner" });
 }

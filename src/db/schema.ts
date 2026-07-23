@@ -230,6 +230,24 @@ export const submissionCodeVersions = pgTable(
   (t) => [index("submission_code_versions_event_idx").on(t.eventId, t.createdAt)],
 );
 
+// 취소(삭제)된 풀이 — 자동 재수집(cron 폴링/대량 import)으로 되살아나지 않게 막는 제외 목록.
+// 사용자가 직접(수동 입력/실시간 재풀이) 등록하면 해제된다.
+export const excludedSolves = pgTable(
+  "excluded_solves",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    platform: platformEnum("platform").notNull(),
+    problemSlug: text("problem_slug").notNull(),
+    reason: text("reason"),
+    excludedBy: integer("excluded_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("excluded_solve_user_platform_slug_uq").on(t.userId, t.platform, t.problemSlug)],
+);
+
 // 문제별 "치팅 의심" 신고 (멤버가 다른 사람의 풀이를 신고)
 export const cheatReports = pgTable(
   "cheat_reports",

@@ -31,6 +31,28 @@ export async function appendSubmissionEvent(
   tx: LedgerTransaction,
   input: LedgerSubmissionInput,
 ): Promise<{ readonly eventId: number; readonly solveId: number; readonly isNew: boolean; readonly codeSaved: boolean }> {
+  // 취소(삭제)된 풀이 처리:
+  //  - 자동 재수집(CRON 폴링 / IMPORT 대량 가져오기)은 되살리지 않고 그대로 무시
+  //  - 사용자가 직접(EXTENSION 실시간 재풀이 / MANUAL·LEGACY 수동)이면 제외를 해제하고 정상 등록
+  const [excluded] = await tx
+    .select({ id: schema.excludedSolves.id })
+    .from(schema.excludedSolves)
+    .where(
+      and(
+        eq(schema.excludedSolves.userId, input.userId),
+        eq(schema.excludedSolves.platform, input.platform),
+        eq(schema.excludedSolves.problemSlug, input.problemSlug),
+      ),
+    )
+    .limit(1);
+  if (excluded) {
+    const isAutomatic = input.source === "CRON" || input.source === "IMPORT";
+    if (isAutomatic) {
+      return { eventId: 0, solveId: 0, isNew: false, codeSaved: false };
+    }
+    await tx.delete(schema.excludedSolves).where(eq(schema.excludedSolves.id, excluded.id));
+  }
+
   const receivedAt = new Date();
   const insertedEvent = await tx
     .insert(schema.submissionEvents)
