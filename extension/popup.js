@@ -4,6 +4,28 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 // API 주소는 고정 — 사용자는 토큰만 입력한다.
 const API_BASE = "https://algo-study-eight.vercel.app";
 
+// 서버 벌크 상한(100개)에 맞춰 나눠서 업로드한다. 진행 상황을 set 에 표시.
+async function uploadBulkChunked(apiBase, token, platform, problems, set) {
+  const CHUNK = 100;
+  const base = apiBase.replace(/\/$/, "");
+  const agg = { received: 0, inserted: 0, withCode: 0 };
+  for (let i = 0; i < problems.length; i += CHUNK) {
+    const batch = problems.slice(i, i + CHUNK);
+    if (set) set.textContent = `업로드 중… ${Math.min(i + batch.length, problems.length)}/${problems.length}`;
+    const res = await fetch(`${base}/api/ingest/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ platform, problems: batch }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    agg.received += out.received || batch.length;
+    agg.inserted += out.inserted || 0;
+    agg.withCode += out.withCode || 0;
+  }
+  return agg;
+}
+
 async function init() {
   const { token } = await chrome.storage.local.get(["token"]);
   if (token) $("token").value = token;
@@ -176,14 +198,7 @@ $("importPg").addEventListener("click", async () => {
       return;
     }
 
-    set.textContent = `${problems.length}개 업로드 중…`;
-    const res = await fetch(`${apiBase.replace(/\/$/, "")}/api/ingest/bulk`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ platform: "PROGRAMMERS", problems }),
-    });
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    const out = await uploadBulkChunked(apiBase, token, "PROGRAMMERS", problems, set);
     set.style.color = "var(--success)";
     set.textContent = `완료 ✓ 총 ${out.received}개 중 ${out.inserted}개 새로 반영`;
     if (token && apiBase) loadDashboard(apiBase, token);
@@ -258,14 +273,7 @@ $("importLc").addEventListener("click", async () => {
       });
     }
 
-    set.textContent = `${problems.length}개 업로드 중…`;
-    const res = await fetch(`${apiBase.replace(/\/$/, "")}/api/ingest/bulk`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ platform: "LEETCODE", problems }),
-    });
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    const out = await uploadBulkChunked(apiBase, token, "LEETCODE", problems, set);
     set.style.color = "var(--success)";
     set.textContent = `완료 ✓ ${out.received}개 반영 (코드 ${out.withCode}개)`;
     loadDashboard(apiBase, token);
