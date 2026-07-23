@@ -111,6 +111,22 @@ export default async function Home() {
         </div>
       </header>
 
+      {admin && (
+        <Link
+          href="/admin"
+          className="rise mt-8 flex items-center justify-between rounded-2xl p-4 transition hover:brightness-105"
+          style={{ background: "color-mix(in srgb, var(--accent) 10%, transparent)", border: "1px solid var(--border)" }}
+        >
+          <div>
+            <div className="flex items-center gap-2 font-semibold">
+              <span>🛠️ 관리자 대시보드</span>
+            </div>
+            <div className="text-sm text-secondary">모든 스터디 관리 · 사용자 닉네임 변경</div>
+          </div>
+          <span className="accent text-sm">열기 →</span>
+        </Link>
+      )}
+
       {!linked && (
         <section className="rise mt-8">
           <div

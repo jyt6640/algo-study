@@ -40,6 +40,12 @@ export const linkPayloadSchema = z.object({
 export const handlePayloadSchema = linkPayloadSchema.extend({ platform: z.enum(["LEETCODE", "PROGRAMMERS"]).default("LEETCODE") });
 export const tokenDeleteSchema = z.object({ id: z.number().int().positive() });
 
+export const nicknameSchema = z.object({
+  nickname: z.string().trim().min(1, "닉네임을 입력하세요.").max(30, "닉네임은 30자 이하로 해주세요."),
+  // 관리자가 다른 사용자를 변경할 때만 사용
+  userId: z.number().int().positive().optional(),
+});
+
 export async function readJsonBody(req: Request): Promise<{ readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly status: 400 | 413; readonly error: string }> {
   const declaredLength = Number(req.headers.get("content-length") ?? 0);
   if (declaredLength > MAX_BODY_BYTES) {

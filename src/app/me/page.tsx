@@ -11,6 +11,7 @@ import { PlatformLink } from "@/components/PlatformLink";
 import { RefreshButton } from "./RefreshButton";
 import { Tokens } from "./Tokens";
 import { ImportCode } from "@/components/ImportCode";
+import { NicknameEditor } from "@/components/NicknameEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -55,10 +56,16 @@ export default async function MyProfile() {
           <img src={user.image} alt="" className="h-16 w-16 rounded-full" />
         )}
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{user.name ?? user.nickname}</h1>
-          <p className="text-sm text-secondary">@{user.nickname}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">{user.nickname}</h1>
+          {user.githubLogin && <p className="text-sm text-secondary">GitHub @{user.githubLogin}</p>}
         </div>
       </div>
+
+      <section className="card mt-6 p-6">
+        <div className="text-sm font-semibold">닉네임</div>
+        <p className="mb-3 mt-0.5 text-xs text-secondary">스터디에서 이 이름으로 표시돼요.</p>
+        <NicknameEditor initial={user.nickname} />
+      </section>
 
       {user.leetcodeHandle && (
         <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
