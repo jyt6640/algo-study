@@ -140,14 +140,18 @@ export default async function MemberPage({
             return (
               <li key={s.id} className="p-5">
                 <div className="flex items-center justify-between gap-3">
-                  <a
-                    href={problemUrl(s.platform, s.problemSlug)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium hover:underline"
-                  >
-                    {s.problemTitle ?? s.problemSlug}
-                  </a>
+                  {problemUrl(s.platform, s.problemSlug) ? (
+                    <a
+                      href={problemUrl(s.platform, s.problemSlug)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium hover:underline"
+                    >
+                      {s.problemTitle ?? s.problemSlug}
+                    </a>
+                  ) : (
+                    <span className="font-medium">{s.problemTitle ?? s.problemSlug}</span>
+                  )}
                   <div className="flex shrink-0 items-center gap-2 text-xs text-secondary">
                     {inWeek && (
                       <span

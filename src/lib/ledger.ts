@@ -9,9 +9,11 @@ export type LedgerTransaction = NeonTransaction<
 
 export type LedgerSubmissionInput = {
   readonly userId: number;
-  readonly platform: "LEETCODE" | "PROGRAMMERS";
+  readonly platform: "LEETCODE" | "PROGRAMMERS" | "BOOK";
   readonly problemSlug: string;
   readonly problemTitle?: string | null;
+  /** 직접 기입(책 등) 문제의 본문 */
+  readonly description?: string | null;
   readonly difficulty?: string | null;
   readonly acceptedAt: Date;
   readonly source: "CRON" | "EXTENSION" | "IMPORT" | "MANUAL" | "LEGACY";
@@ -91,6 +93,7 @@ export async function appendSubmissionEvent(
       platform: input.platform,
       problemSlug: input.problemSlug,
       problemTitle: input.problemTitle ?? null,
+      description: input.description ?? null,
       difficulty: input.difficulty ?? null,
       acceptedAt: input.acceptedAt,
       source: input.source === "CRON" ? "LEETCODE_GQL" : input.source === "MANUAL" ? "MANUAL" : "EXTENSION",
@@ -157,7 +160,7 @@ export async function appendSubmissionEvent(
 
 export function submissionEventKey(input: {
   readonly userId: number;
-  readonly platform: "LEETCODE" | "PROGRAMMERS";
+  readonly platform: "LEETCODE" | "PROGRAMMERS" | "BOOK";
   readonly problemSlug: string;
   readonly acceptedAt: Date;
   readonly source: string;

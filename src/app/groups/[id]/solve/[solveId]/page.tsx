@@ -42,6 +42,7 @@ export default async function SolvePage({
       platform: schema.solveLogs.platform,
       slug: schema.solveLogs.problemSlug,
       title: schema.solveLogs.problemTitle,
+      description: schema.solveLogs.description,
       difficulty: schema.solveLogs.difficulty,
       acceptedAt: schema.solveLogs.acceptedAt,
     })
@@ -77,14 +78,26 @@ export default async function SolvePage({
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{solve.title ?? solve.slug}</h1>
-        <a
-          href={problemUrl(solve.platform, solve.slug)}
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-secondary shrink-0 !px-4 !py-1.5 text-sm"
-        >
-          {platformLabel[solve.platform]}에서 열기
-        </a>
+        {(() => {
+          const url = problemUrl(solve.platform, solve.slug);
+          return url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-secondary shrink-0 !px-4 !py-1.5 text-sm"
+            >
+              {platformLabel[solve.platform]}에서 열기
+            </a>
+          ) : (
+            <span
+              className="shrink-0 rounded-full px-3 py-1 text-xs font-medium"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
+            >
+              {platformLabel[solve.platform]}
+            </span>
+          );
+        })()}
       </div>
       <div className="mt-2 flex items-center gap-2 text-sm text-secondary">
         <Link
@@ -117,6 +130,13 @@ export default async function SolvePage({
             redirectTo={`/groups/${groupId}`}
           />
         </div>
+      )}
+
+      {solve.description && (
+        <section className="card mt-6 p-6">
+          <div className="mb-2 text-sm font-semibold">문제 내용</div>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{solve.description}</p>
+        </section>
       )}
 
       {code ? (

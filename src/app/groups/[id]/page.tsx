@@ -269,6 +269,18 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         </div>
       )}
 
+      {isMember && !ended && (
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border)" }}>
+          <div className="text-sm">
+            <div className="font-medium">📖 책·오프라인 문제도 인정</div>
+            <div className="text-secondary">LeetCode·프로그래머스에 없는 문제는 직접 기입하세요.</div>
+          </div>
+          <Link href={`/groups/${groupId}/add`} className="btn btn-secondary shrink-0 !px-4 !py-2 text-sm">
+            문제 직접 추가
+          </Link>
+        </div>
+      )}
+
       <div className="mt-8 space-y-3">
         {rows.map((r) => {
           const met = r.solved >= group.quota;

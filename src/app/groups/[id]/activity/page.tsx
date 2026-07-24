@@ -112,14 +112,18 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
                             <span className="text-sm font-medium">{s.nickname}</span>
                           </Link>
                           <span className="text-secondary">·</span>
-                          <a
-                            href={problemUrl(s.platform, s.slug)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="truncate text-sm hover:underline"
-                          >
-                            {s.title ?? s.slug}
-                          </a>
+                          {problemUrl(s.platform, s.slug) ? (
+                            <a
+                              href={problemUrl(s.platform, s.slug)!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="truncate text-sm hover:underline"
+                            >
+                              {s.title ?? s.slug}
+                            </a>
+                          ) : (
+                            <span className="truncate text-sm">{s.title ?? s.slug}</span>
+                          )}
                           <span className="shrink-0 text-xs text-secondary">· {platformLabel[s.platform]}</span>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">

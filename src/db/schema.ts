@@ -14,7 +14,8 @@ export const roleEnum = pgEnum("role", ["OWNER", "MEMBER"]);
 export const userRoleEnum = pgEnum("user_role", ["USER", "ADMIN"]);
 export const penaltyTypeEnum = pgEnum("penalty_type", ["FIXED", "PER_MISSING"]);
 export const solveSourceEnum = pgEnum("solve_source", ["LEETCODE_GQL", "EXTENSION", "MANUAL"]);
-export const platformEnum = pgEnum("platform", ["LEETCODE", "PROGRAMMERS"]);
+// BOOK = 책·기타(직접 입력) — 온라인 저지가 아닌 문제를 손으로 기입할 때 사용
+export const platformEnum = pgEnum("platform", ["LEETCODE", "PROGRAMMERS", "BOOK"]);
 export const verificationLevelEnum = pgEnum("verification_level", [
   "SERVER_VERIFIED",
   "EXTENSION_VERIFIED",
@@ -120,6 +121,8 @@ export const solveLogs = pgTable(
     platform: platformEnum("platform").notNull().default("LEETCODE"),
     problemSlug: text("problem_slug").notNull(),
     problemTitle: text("problem_title"),
+    // 직접 기입(책 등)한 문제의 본문. 온라인 저지 문제는 보통 비어 있다.
+    description: text("description"),
     difficulty: text("difficulty"),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull(),
     source: solveSourceEnum("source").notNull(),
