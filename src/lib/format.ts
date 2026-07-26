@@ -91,3 +91,37 @@ export function solvesToPlatformCalendar(
   }
   return { total, breakdown };
 }
+
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** "YYYY-MM-DD" 문자열의 요일 (UTC 기준으로 안전하게 계산) */
+function dowOf(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return DOW[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+}
+
+/**
+ * 기간 시작일(YYYY-MM-DD)과 길이(일)로 "7월 20일(월) ~ 26일(일)" 라벨을 만든다.
+ * 주 단위(7일)면 월~일 범위가 그대로 보인다.
+ */
+export function fmtPeriodRange(periodOf: string, periodDays: number): string {
+  const [y, m, d] = periodOf.split("-").map(Number);
+  const startUtc = Date.UTC(y, m - 1, d);
+  const endUtc = startUtc + (Math.max(1, periodDays) - 1) * 86400000; // 마지막 날(포함)
+  const s = new Date(startUtc);
+  const e = new Date(endUtc);
+  const sm = s.getUTCMonth() + 1;
+  const sd = s.getUTCDate();
+  const em = e.getUTCMonth() + 1;
+  const ed = e.getUTCDate();
+  const sDow = DOW[s.getUTCDay()];
+  const eDow = DOW[e.getUTCDay()];
+  if (sm === em) return `${sm}월 ${sd}일(${sDow}) ~ ${ed}일(${eDow})`;
+  return `${sm}월 ${sd}일(${sDow}) ~ ${em}월 ${ed}일(${eDow})`;
+}
+
+/** "7월 20일(월)" */
+export function fmtDayLabel(dateStr: string): string {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}월 ${d}일(${dowOf(dateStr)})`;
+}

@@ -5,7 +5,7 @@ import { db, schema } from "@/db";
 import { currentPeriod } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, fmtPeriodRange, fmtDayLabel } from "@/lib/format";
 import { maybeRefreshLeetcode, maybeRefreshGroupMembers } from "@/lib/refresh";
 import { fetchDailyChallenge } from "@/lib/leetcode";
 import { currentUserIsAdmin } from "@/lib/admin";
@@ -182,11 +182,11 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
               <b style={{ color: "var(--text)" }}>스터디 종료</b>
             ) : notStarted ? (
               <>
-                시작 예정 · <b style={{ color: "var(--text)" }}>{weekOf}부터</b>
+                시작 예정 · <b style={{ color: "var(--text)" }}>{fmtDayLabel(weekOf)}부터</b>
               </>
             ) : (
               <>
-                이번 기간 ({weekOf} 시작) · 마감까지{" "}
+                이번 기간 <b style={{ color: "var(--text)" }}>{fmtPeriodRange(weekOf, group.periodDays)}</b> · 마감까지{" "}
                 <b style={{ color: "var(--text)" }}>
                   {daysLeft}일 {hoursLeft}시간
                 </b>
@@ -365,13 +365,15 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         </div>
         {ledgerByWeek.size === 0 ? (
           <p className="mt-4 text-sm text-secondary">
-            아직 마감된 주가 없어요. 매주 일요일 자정에 확정됩니다.
+            아직 마감된 기간이 없어요. {group.periodDays === 7 && !group.startDate ? "매주 월요일 00:00(KST)에 새 기간이 시작되고, 일요일 자정에 확정됩니다." : `${group.periodDays}일마다 마감되어 확정됩니다.`}
           </p>
         ) : (
           <div className="mt-4 space-y-3">
             {[...ledgerByWeek.entries()].map(([week, entries]) => (
               <div key={week} className="card p-5">
-                <div className="mb-3 text-sm font-semibold text-secondary">{week} 주</div>
+                <div className="mb-3 text-sm font-semibold text-secondary">
+                  {fmtPeriodRange(week, group.periodDays)}
+                </div>
                 <div className="space-y-2">
                   {entries.map((e) => (
                     <LedgerEntry key={e.id} groupId={groupId} entry={e} quota={group.quota} isOwner={isOwner} />

@@ -7,6 +7,7 @@ import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
 import { currentUserIsAdmin } from "@/lib/admin";
 import { getMembership } from "@/lib/membership";
+import { fmtPeriodRange } from "@/lib/format";
 import { LedgerEntry } from "../LedgerEntry";
 import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 
@@ -35,7 +36,7 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const { start, end, notStarted, ended } = currentPeriod(new Date(), group);
+  const { start, end, periodOf, notStarted, ended } = currentPeriod(new Date(), group);
 
   const members = await db
     .select({ userId: schema.memberships.userId, nickname: schema.users.nickname, role: schema.memberships.role })
@@ -176,7 +177,15 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
       </div>
 
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">방장 대시보드</h1>
-      <p className="mt-1 text-sm text-secondary">{group.name} 운영 현황을 한눈에.</p>
+      <p className="mt-1 text-sm text-secondary">
+        {group.name} 운영 현황을 한눈에.
+        {!notStarted && !ended && (
+          <>
+            {" "}
+            이번 기간 <b style={{ color: "var(--text)" }}>{fmtPeriodRange(periodOf, group.periodDays)}</b>
+          </>
+        )}
+      </p>
 
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stat("멤버", `${members.length}명`)}
@@ -271,7 +280,9 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
           <div className="mt-4 space-y-3">
             {[...ledgerByWeek.entries()].map(([week, entries]) => (
               <div key={week} className="card p-5">
-                <div className="mb-3 text-sm font-semibold text-secondary">{week} 기간</div>
+                <div className="mb-3 text-sm font-semibold text-secondary">
+                  {fmtPeriodRange(week, group.periodDays)}
+                </div>
                 <div className="space-y-2">
                   {entries.map((e) => (
                     <LedgerEntry key={e.id} groupId={groupId} entry={e} quota={group.quota} isOwner={isOwner} />
