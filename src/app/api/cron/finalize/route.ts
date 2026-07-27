@@ -6,11 +6,12 @@ import { calcPenalty } from "@/lib/penalty";
 import { isAuthorizedCron } from "@/lib/cronAuth";
 import { sendDiscord } from "@/lib/notify";
 import { ensureTransaction, type LedgerTransaction } from "@/lib/ledger";
+import { proratedQuota } from "@/lib/prorate";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type Participant = { readonly userId: number; readonly nickname: string };
+type Participant = { readonly userId: number; readonly nickname: string; readonly joinedAt: Date };
 
 async function participantsForPeriod(
   tx: LedgerTransaction,
@@ -19,7 +20,11 @@ async function participantsForPeriod(
   endAt: Date,
 ): Promise<Participant[]> {
   const current = await tx
-    .select({ userId: schema.memberships.userId, nickname: schema.users.nickname })
+    .select({
+      userId: schema.memberships.userId,
+      nickname: schema.users.nickname,
+      joinedAt: schema.memberships.joinedAt,
+    })
     .from(schema.memberships)
     .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
     .where(eq(schema.memberships.groupId, groupId));
@@ -51,15 +56,34 @@ async function participantsForPeriod(
     byUser.set(event.userId, events);
   }
 
+  // 가입 시각: 현재 멤버십의 joined_at 과 최초 JOINED 이벤트 중 이른 쪽
+  const joinedAtOf = (userId: number): Date | null => {
+    const events = byUser.get(userId) ?? [];
+    const firstJoinEvent = events.find((event) => event.type === "JOINED")?.effectiveAt ?? null;
+    const membershipJoin = currentByUser.get(userId)?.joinedAt ?? null;
+    const candidates = [firstJoinEvent, membershipJoin].filter((d): d is Date => Boolean(d));
+    if (candidates.length === 0) return null;
+    return candidates.reduce((a, b) => (a < b ? a : b));
+  };
+
   return [...userIds]
-    .filter((userId) => {
-      const events = byUser.get(userId) ?? [];
-      const beforeStart = [...events].reverse().find((event) => event.effectiveAt <= startAt);
-      if (beforeStart) return beforeStart.type === "JOINED";
-      const joinedAfterStart = events.some((event) => event.type === "JOINED" && event.effectiveAt > startAt);
-      return Boolean(currentByUser.has(userId)) && !joinedAfterStart;
+    .map((userId) => ({ userId, joinedAt: joinedAtOf(userId) }))
+    .filter((candidate): candidate is { userId: number; joinedAt: Date } => {
+      if (!candidate.joinedAt) return false;
+      // 기간이 끝난 뒤 가입했으면 이 기간과 무관
+      if (candidate.joinedAt >= endAt) return false;
+      // 기간 시작 전에 이미 나갔으면 제외 (기간 중 탈퇴는 그 기간까지 인정)
+      const events = byUser.get(candidate.userId) ?? [];
+      const lastBeforeStart = [...events].reverse().find((event) => event.effectiveAt <= startAt);
+      if (lastBeforeStart && lastBeforeStart.type !== "JOINED" && lastBeforeStart.type !== "RESUMED") return false;
+      // 더 이상 멤버가 아니고 가입 이력도 없으면 제외
+      return currentByUser.has(candidate.userId) || events.length > 0;
     })
-    .map((userId) => ({ userId, nickname: names.get(userId) ?? `user-${userId}` }));
+    .map(({ userId, joinedAt }) => ({
+      userId,
+      nickname: names.get(userId) ?? `user-${userId}`,
+      joinedAt,
+    }));
 }
 
 async function finalizePeriod(group: typeof schema.groups.$inferSelect, period: { start: Date; end: Date; periodOf: string }) {
@@ -125,18 +149,21 @@ async function finalizePeriod(group: typeof schema.groups.$inferSelect, period: 
               eq(schema.submissionEvents.verificationLevel, "SERVER_VERIFIED"),
               eq(schema.submissionEvents.verificationLevel, "EXTENSION_VERIFIED"),
               eq(schema.submissionEvents.verificationLevel, "LEGACY"),
+              // 책·오프라인 문제 직접 기입도 목표 개수에 포함 (대시보드 집계와 동일)
+              eq(schema.submissionEvents.verificationLevel, "MANUAL_PENDING"),
             ),
           ),
       );
       const solved = new Set(events.map((event) => `${event.platform}:${event.slug}`)).size;
-      const met = solved >= snapshot.quota;
-      const penalty = calcPenalty(snapshot.penaltyType, snapshot.penaltyAmount, snapshot.quota, solved);
-      const [result] = await tx
+      // 기간 중 가입자는 남은 일수만큼 목표를 비례 적용
+      const effectiveQuota = proratedQuota(snapshot.quota, snapshot.startAt, snapshot.endAt, participant.joinedAt);
+      const met = solved >= effectiveQuota;
+      const penalty = calcPenalty(snapshot.penaltyType, snapshot.penaltyAmount, effectiveQuota, solved);
+      await tx
         .insert(schema.periodResults)
         .values({ periodId, userId: participant.userId, solvedCount: solved, metQuota: met, penaltyAmount: penalty })
-        .onConflictDoNothing({ target: [schema.periodResults.periodId, schema.periodResults.userId] })
-        .returning({ id: schema.periodResults.id });
-      if (!result) continue;
+        .onConflictDoNothing({ target: [schema.periodResults.periodId, schema.periodResults.userId] });
+      // 화면이 읽는 레거시 장부에도 반드시 반영 (재시도 시에도 누락되지 않게)
       await tx
         .insert(schema.weeklyResults)
         .values({
@@ -150,8 +177,8 @@ async function finalizePeriod(group: typeof schema.groups.$inferSelect, period: 
         .onConflictDoNothing({ target: [schema.weeklyResults.userId, schema.weeklyResults.groupId, schema.weeklyResults.weekOf] });
       summary.push(
           met
-          ? `✅ ${participant.nickname} — ${solved}/${snapshot.quota} 달성`
-          : `❌ ${participant.nickname} — ${solved}/${snapshot.quota} · 벌금 ${penalty.toLocaleString()}원`,
+          ? `✅ ${participant.nickname} — ${solved}/${effectiveQuota} 달성`
+          : `❌ ${participant.nickname} — ${solved}/${effectiveQuota} · 벌금 ${penalty.toLocaleString()}원`,
       );
     }
 
