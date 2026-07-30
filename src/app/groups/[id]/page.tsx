@@ -409,6 +409,26 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             </Link>
           )}
           <MemberPanel groupId={groupId} viewerId={viewerId!} />
+
+          <section className="mt-12 rounded-2xl border p-5" style={{ borderColor: "var(--border)" }}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm">
+                <div className="font-medium">스터디 나가기</div>
+                <div className="text-secondary">
+                  {isOwner
+                    ? "방장은 바로 나갈 수 없어요. 관리하기 → 설정에서 스터디를 삭제하거나 방장을 넘겨주세요."
+                    : "나가면 다음 기간부터 집계에서 제외돼요. 이미 확정된 벌금은 장부에 남습니다."}
+                </div>
+              </div>
+              {isOwner ? (
+                <Link href={`/groups/${groupId}/settings`} className="btn btn-secondary shrink-0 !px-4 !py-2 text-sm">
+                  설정으로 이동
+                </Link>
+              ) : (
+                <LeaveButton groupId={groupId} variant="button" />
+              )}
+            </div>
+          </section>
         </>
       )}
     </main>

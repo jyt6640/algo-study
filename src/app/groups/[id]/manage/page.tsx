@@ -10,6 +10,7 @@ import { getMembership } from "@/lib/membership";
 import { fmtPeriodRange } from "@/lib/format";
 import { LedgerEntry } from "../LedgerEntry";
 import { DeleteSolveButton } from "@/components/DeleteSolveButton";
+import { MemberManage } from "@/components/MemberManage";
 
 export const dynamic = "force-dynamic";
 
@@ -204,6 +205,20 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
           <div className="accent font-mono text-lg font-semibold tracking-widest">{group.inviteCode}</div>
         </div>
       )}
+
+      {/* 멤버 관리 (방출) */}
+      <section className="mt-12">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-xl font-semibold">멤버 관리</h2>
+          <span className="text-sm text-secondary">{members.length}명</span>
+        </div>
+        <p className="mt-1 text-xs text-secondary">
+          방출하면 이후 기간에서 제외돼요. 이미 확정된 기록·벌금은 장부에 그대로 남습니다.
+        </p>
+        <div className="mt-4">
+          <MemberManage groupId={groupId} members={members} />
+        </div>
+      </section>
 
       {/* 익명 신고 검토 */}
       <section className="mt-12">
