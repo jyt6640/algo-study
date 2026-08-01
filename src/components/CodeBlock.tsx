@@ -33,17 +33,22 @@ function normalize(language?: string | null): string | null {
   return hljs.getLanguage(key) ? key : null;
 }
 
-export function CodeBlock({ code, language }: { code: string; language?: string | null }) {
+/** 코드를 하이라이트한 HTML 문자열로 변환 (서버에서 사용) */
+export function highlightCode(code: string, language?: string | null): string {
   const lang = normalize(language);
-  let html: string;
   try {
-    html = lang
+    return lang
       ? hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
       : hljs.highlightAuto(code).value;
   } catch {
     // 하이라이트 실패 시 원문(이스케이프)로 폴백
-    html = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
+}
+
+export function CodeBlock({ code, language }: { code: string; language?: string | null }) {
+  const lang = normalize(language);
+  const html = highlightCode(code, language);
 
   return (
     <pre

@@ -233,6 +233,43 @@ export const submissionCodeVersions = pgTable(
   (t) => [index("submission_code_versions_event_idx").on(t.eventId, t.createdAt)],
 );
 
+// 풀이 전체에 대한 개인 메모 (작성자 본인만 조회·수정)
+export const solveNotes = pgTable(
+  "solve_notes",
+  {
+    id: serial("id").primaryKey(),
+    solveLogId: integer("solve_log_id")
+      .notNull()
+      .references(() => solveLogs.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("solve_note_solve_user_uq").on(t.solveLogId, t.userId)],
+);
+
+// 코드 라인별 개인 메모 (작성자 본인만 조회·수정)
+export const solveLineNotes = pgTable(
+  "solve_line_notes",
+  {
+    id: serial("id").primaryKey(),
+    solveLogId: integer("solve_log_id")
+      .notNull()
+      .references(() => solveLogs.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    line: integer("line").notNull(), // 1-based 줄 번호
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("solve_line_note_solve_user_line_uq").on(t.solveLogId, t.userId, t.line)],
+);
+
 // 취소(삭제)된 풀이 — 자동 재수집(cron 폴링/대량 import)으로 되살아나지 않게 막는 제외 목록.
 // 사용자가 직접(수동 입력/실시간 재풀이) 등록하면 해제된다.
 export const excludedSolves = pgTable(

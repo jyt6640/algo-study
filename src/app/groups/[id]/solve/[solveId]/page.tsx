@@ -8,7 +8,9 @@ import { currentUserId } from "@/lib/session";
 import { getMembership } from "@/lib/membership";
 import { MembersOnly } from "@/components/MembersOnly";
 import { ManualCodeEntry } from "@/components/ManualCodeEntry";
-import { CodeBlock } from "@/components/CodeBlock";
+import { highlightCode } from "@/components/CodeBlock";
+import { splitHighlightedLines } from "@/lib/highlightLines";
+import { CodeNotes } from "@/components/CodeNotes";
 import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 
 export const dynamic = "force-dynamic";
@@ -65,8 +67,10 @@ export default async function SolvePage({
     .where(eq(schema.submissions.solveLogId, sid))
     .limit(1);
 
+  const codeLines = code ? splitHighlightedLines(highlightCode(code.code, code.language)) : [];
+
   return (
-    <main className="rise mx-auto max-w-2xl px-6 py-14">
+    <main className={`rise mx-auto px-6 py-14 ${code ? "max-w-5xl" : "max-w-2xl"}`}>
       <div className="flex items-center gap-3 text-sm">
         <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
           ← 대시보드
@@ -140,12 +144,12 @@ export default async function SolvePage({
       )}
 
       {code ? (
-        <div className="mt-6">
-          <div className="mb-2 text-sm font-semibold">
-            정답 코드 {code.language ? <span className="text-secondary">({code.language})</span> : null}
-          </div>
-          <CodeBlock code={code.code} language={code.language} />
-        </div>
+        <CodeNotes
+          solveId={sid}
+          lines={codeLines}
+          language={code.language}
+          canEdit={Boolean(viewerId)}
+        />
       ) : (
         <div className="card mt-6 p-6 text-sm text-secondary">
           아직 이 문제의 코드가 없어요. 아래에 직접 붙여넣어 저장하거나 확장프로그램으로 자동 업로드할 수 있어요.
