@@ -245,6 +245,8 @@ export const solveNotes = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
+    // true 면 같은 스터디 멤버에게 공개 (기본은 나만 보기)
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -264,6 +266,8 @@ export const solveLineNotes = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     line: integer("line").notNull(), // 1-based 줄 번호
     body: text("body").notNull(),
+    // true 면 같은 스터디 멤버에게 공개 (기본은 나만 보기)
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

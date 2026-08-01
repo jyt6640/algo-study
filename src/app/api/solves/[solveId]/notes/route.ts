@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { currentUserId } from "@/lib/session";
@@ -13,31 +13,97 @@ const noteSchema = z.object({
   // 풀이 전체 메모. line 이 있으면 그 줄의 메모.
   line: z.number().int().positive().max(100_000).optional(),
   body: z.string().max(MAX_NOTE),
+  isPublic: z.boolean().optional(),
 });
 
 const deleteSchema = z.object({ line: z.number().int().positive().max(100_000) });
 
-/** 내 메모 전부 (풀이 메모 + 라인 메모). 메모는 작성자 본인에게만 보인다. */
+/** 뷰어와 같은 스터디에 속한 사용자 id 목록 (공개 메모 열람 범위) */
+async function studymateIds(viewerId: number): Promise<number[]> {
+  const myGroups = await db
+    .select({ groupId: schema.memberships.groupId })
+    .from(schema.memberships)
+    .where(eq(schema.memberships.userId, viewerId));
+  if (myGroups.length === 0) return [];
+  const mates = await db
+    .select({ userId: schema.memberships.userId })
+    .from(schema.memberships)
+    .where(
+      inArray(
+        schema.memberships.groupId,
+        myGroups.map((g) => g.groupId),
+      ),
+    );
+  return [...new Set(mates.map((m) => m.userId))];
+}
+
+/**
+ * 내 메모(공개 여부 포함) + 같은 스터디 멤버가 공개한 메모.
+ */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ solveId: string }> }) {
   const userId = await currentUserId();
-  if (!userId) return NextResponse.json({ note: null, lineNotes: [] });
+  if (!userId) return NextResponse.json({ note: null, isPublic: false, lineNotes: [], shared: { note: [], lineNotes: [] } });
 
   const { solveId } = await params;
   const sid = Number(solveId);
   if (!Number.isFinite(sid)) return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
 
   const [note] = await db
-    .select({ body: schema.solveNotes.body })
+    .select({ body: schema.solveNotes.body, isPublic: schema.solveNotes.isPublic })
     .from(schema.solveNotes)
     .where(and(eq(schema.solveNotes.solveLogId, sid), eq(schema.solveNotes.userId, userId)))
     .limit(1);
 
   const lineNotes = await db
-    .select({ line: schema.solveLineNotes.line, body: schema.solveLineNotes.body })
+    .select({
+      line: schema.solveLineNotes.line,
+      body: schema.solveLineNotes.body,
+      isPublic: schema.solveLineNotes.isPublic,
+    })
     .from(schema.solveLineNotes)
     .where(and(eq(schema.solveLineNotes.solveLogId, sid), eq(schema.solveLineNotes.userId, userId)));
 
-  return NextResponse.json({ note: note?.body ?? null, lineNotes });
+  // 같은 스터디 멤버가 공개한 메모
+  const mates = (await studymateIds(userId)).filter((id) => id !== userId);
+  const sharedNotes = mates.length
+    ? await db
+        .select({ body: schema.solveNotes.body, author: schema.users.nickname, image: schema.users.image })
+        .from(schema.solveNotes)
+        .innerJoin(schema.users, eq(schema.users.id, schema.solveNotes.userId))
+        .where(
+          and(
+            eq(schema.solveNotes.solveLogId, sid),
+            eq(schema.solveNotes.isPublic, true),
+            inArray(schema.solveNotes.userId, mates),
+            ne(schema.solveNotes.userId, userId),
+          ),
+        )
+    : [];
+  const sharedLineNotes = mates.length
+    ? await db
+        .select({
+          line: schema.solveLineNotes.line,
+          body: schema.solveLineNotes.body,
+          author: schema.users.nickname,
+        })
+        .from(schema.solveLineNotes)
+        .innerJoin(schema.users, eq(schema.users.id, schema.solveLineNotes.userId))
+        .where(
+          and(
+            eq(schema.solveLineNotes.solveLogId, sid),
+            eq(schema.solveLineNotes.isPublic, true),
+            inArray(schema.solveLineNotes.userId, mates),
+            ne(schema.solveLineNotes.userId, userId),
+          ),
+        )
+    : [];
+
+  return NextResponse.json({
+    note: note?.body ?? null,
+    isPublic: note?.isPublic ?? false,
+    lineNotes,
+    shared: { note: sharedNotes, lineNotes: sharedLineNotes },
+  });
 }
 
 /** 메모 저장 (본문이 비면 삭제) */
@@ -55,7 +121,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ solv
   if (!parsed.success)
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
 
-  // 풀이가 실제로 있는지 확인
   const [solve] = await db
     .select({ id: schema.solveLogs.id })
     .from(schema.solveLogs)
@@ -64,6 +129,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ solv
   if (!solve) return NextResponse.json({ error: "풀이를 찾을 수 없어요." }, { status: 404 });
 
   const body = parsed.data.body.trim();
+  const isPublic = parsed.data.isPublic ?? false;
   const line = parsed.data.line;
   const now = new Date();
 
@@ -76,12 +142,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ solv
     }
     await db
       .insert(schema.solveNotes)
-      .values({ solveLogId: sid, userId, body })
+      .values({ solveLogId: sid, userId, body, isPublic })
       .onConflictDoUpdate({
         target: [schema.solveNotes.solveLogId, schema.solveNotes.userId],
-        set: { body, updatedAt: now },
+        set: { body, isPublic, updatedAt: now },
       });
-    return NextResponse.json({ ok: true, note: body });
+    return NextResponse.json({ ok: true, note: body, isPublic });
   }
 
   if (!body) {
@@ -99,12 +165,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ solv
 
   await db
     .insert(schema.solveLineNotes)
-    .values({ solveLogId: sid, userId, line, body })
+    .values({ solveLogId: sid, userId, line, body, isPublic })
     .onConflictDoUpdate({
       target: [schema.solveLineNotes.solveLogId, schema.solveLineNotes.userId, schema.solveLineNotes.line],
-      set: { body, updatedAt: now },
+      set: { body, isPublic, updatedAt: now },
     });
-  return NextResponse.json({ ok: true, line, body });
+  return NextResponse.json({ ok: true, line, body, isPublic });
 }
 
 /** 라인 메모 삭제 */
