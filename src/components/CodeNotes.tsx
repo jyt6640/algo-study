@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Markdown } from "./Markdown";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 type LineNote = { line: number; body: string; isPublic: boolean };
 type SharedNote = { body: string; author: string; image?: string | null };
@@ -195,22 +197,15 @@ export function CodeNotes({
                     className="mx-3 my-2 rounded-xl border p-3"
                     style={{ borderColor: "var(--border)", background: "var(--surface)" }}
                   >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs text-secondary">{line}번 줄 메모</span>
-                      <PublicToggle value={draftPublic} onChange={setDraftPublic} size="xs" />
-                    </div>
-                    <textarea
-                      autoFocus
+                    <div className="mb-2 text-xs text-secondary">{line}번 줄 메모</div>
+                    <MarkdownEditor
                       value={draft}
-                      onChange={(e) => setDraft(e.target.value.slice(0, 10000))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") setActiveLine(null);
-                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveLine();
-                      }}
+                      onChange={setDraft}
                       rows={3}
-                      placeholder="이 줄에 대한 메모… (⌘/Ctrl+Enter 저장, Esc 닫기)"
-                      className="input resize-y text-sm"
-                      style={{ fontFamily: "inherit" }}
+                      maxLength={10000}
+                      compact
+                      placeholder="이 줄에 대한 메모… (마크다운 지원)"
+                      right={<PublicToggle value={draftPublic} onChange={setDraftPublic} size="xs" />}
                     />
                     <div className="mt-2 flex justify-end gap-2">
                       <button
@@ -234,15 +229,11 @@ export function CodeNotes({
                     className={`mx-3 my-1 rounded-lg px-3 py-2 text-xs ${canEdit ? "cursor-pointer" : ""}`}
                     style={{ background: "var(--surface-2)", color: "var(--text)", fontFamily: "inherit" }}
                   >
-                    <span className="mr-1.5" style={{ color: "var(--warning)" }}>
-                      ✎ {line}
-                    </span>
-                    <span className="whitespace-pre-wrap">{mine.body}</span>
-                    {mine.isPublic && (
-                      <span className="ml-1.5 text-[11px]" style={{ color: "var(--accent)" }}>
-                        🌐
-                      </span>
-                    )}
+                    <div className="mb-1 flex items-center gap-1.5 text-[11px]">
+                      <span style={{ color: "var(--warning)" }}>✎ {line}번 줄</span>
+                      {mine.isPublic && <span style={{ color: "var(--accent)" }}>🌐 공개</span>}
+                    </div>
+                    <Markdown compact>{mine.body}</Markdown>
                   </div>
                 )}
 
@@ -257,10 +248,10 @@ export function CodeNotes({
                       fontFamily: "inherit",
                     }}
                   >
-                    <span className="mr-1.5 font-medium" style={{ color: "var(--accent)" }}>
+                    <div className="mb-1 text-[11px] font-medium" style={{ color: "var(--accent)" }}>
                       {o.author}
-                    </span>
-                    <span className="whitespace-pre-wrap">{o.body}</span>
+                    </div>
+                    <Markdown compact>{o.body}</Markdown>
                   </div>
                 ))}
               </div>
@@ -281,15 +272,21 @@ export function CodeNotes({
             {savedAt && <span className="ml-1">· {savedAt} 저장됨</span>}
           </p>
           {canEdit ? (
-            <textarea
-              value={note}
-              onChange={(e) => onNoteChange(e.target.value.slice(0, 10000))}
-              rows={12}
-              disabled={!loaded}
-              placeholder={loaded ? "풀이 아이디어, 시간복잡도, 막혔던 부분…" : "불러오는 중…"}
-              className="input mt-3 resize-y text-sm"
-              style={{ fontFamily: "inherit" }}
-            />
+            <div className="mt-3">
+              <MarkdownEditor
+                value={note}
+                onChange={onNoteChange}
+                rows={12}
+                maxLength={10000}
+                disabled={!loaded}
+                compact
+                placeholder={
+                  loaded
+                    ? "## 아이디어\n- 투 포인터로 O(n)\n\n## 막혔던 부분\n`while` 조건에서 경계 처리"
+                    : "불러오는 중…"
+                }
+              />
+            </div>
           ) : (
             <p className="mt-3 text-sm text-secondary">로그인하면 메모를 쓸 수 있어요.</p>
           )}
@@ -309,7 +306,7 @@ export function CodeNotes({
                     )}
                     {s.author}
                   </div>
-                  <p className="whitespace-pre-wrap">{s.body}</p>
+                  <Markdown compact>{s.body}</Markdown>
                 </div>
               ))}
             </div>

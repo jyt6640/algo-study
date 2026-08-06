@@ -11,6 +11,7 @@ import { ManualCodeEntry } from "@/components/ManualCodeEntry";
 import { highlightCode } from "@/components/CodeBlock";
 import { splitHighlightedLines } from "@/lib/highlightLines";
 import { CodeNotes } from "@/components/CodeNotes";
+import { Markdown } from "@/components/Markdown";
 import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 
 export const dynamic = "force-dynamic";
@@ -138,8 +139,8 @@ export default async function SolvePage({
 
       {solve.description && (
         <section className="card mt-6 p-6">
-          <div className="mb-2 text-sm font-semibold">문제 내용</div>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{solve.description}</p>
+          <div className="mb-3 text-sm font-semibold">문제 내용</div>
+          <Markdown>{solve.description}</Markdown>
         </section>
       )}
 

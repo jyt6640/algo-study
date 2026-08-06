@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
 const LANGS = ["Java", "Python", "C++", "JavaScript", "TypeScript", "C", "C#", "Kotlin", "Swift", "Go", "Rust"];
 
@@ -63,14 +64,14 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
 
       <div>
         <label className="text-sm font-semibold">문제 내용</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value.slice(0, 20000))}
-          rows={7}
-          placeholder="문제 지문을 붙여넣거나 요약해서 적어주세요. (선택)"
-          className="input mt-2 resize-y"
-          style={{ fontFamily: "inherit" }}
-        />
+        <div className="mt-2">
+          <MarkdownEditor
+            value={description}
+            onChange={setDescription}
+            rows={8}
+            placeholder={"문제 지문을 붙여넣거나 요약해서 적어주세요. (선택)\n\n## 입력\n- N (1 ≤ N ≤ 100)\n\n## 예시\n```\n입력: 3\n출력: 6\n```"}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
