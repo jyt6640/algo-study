@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { acceptedAtISO } from "@/lib/acceptedAt";
 
 const LANGS = ["Java", "Python", "C++", "JavaScript", "TypeScript", "C", "C#", "Kotlin", "Swift", "Go", "Rust"];
 
@@ -31,8 +32,9 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
           code: code || undefined,
           language: code ? language : undefined,
           difficulty: difficulty.trim() || undefined,
-          // 날짜만 고른 경우 그 날 정오로 기록 (타임존 경계 문제 방지)
-          acceptedAt: date ? new Date(`${date}T12:00:00`).toISOString() : undefined,
+          // 고른 날짜 + 지금 시각(작성 시간 기준)으로 기록.
+          // 오늘이면 그대로 현재 시각, 과거 날짜면 그 날짜에 현재 시각을 얹는다.
+          acceptedAt: acceptedAtISO(date),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -97,6 +99,7 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
         <div>
           <label className="text-sm font-semibold">푼 날짜</label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input mt-2" />
+          <p className="mt-1 text-[11px] text-secondary">시각은 저장하는 시점으로 기록돼요.</p>
         </div>
       </div>
 

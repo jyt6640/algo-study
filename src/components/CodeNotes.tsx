@@ -131,6 +131,32 @@ export function CodeNotes({
     setActiveLine(null);
   }
 
+  async function deleteLine(line: number) {
+    if (!confirm(`${line}번 줄 메모를 삭제할까요?`)) return;
+    const res = await fetch(`/api/solves/${solveId}/notes`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ line }),
+    });
+    if (!res.ok) {
+      alert("메모를 삭제하지 못했어요.");
+      return;
+    }
+    setLineNotes((prev) => {
+      const next = new Map(prev);
+      next.delete(line);
+      return next;
+    });
+    if (activeLine === line) setActiveLine(null);
+  }
+
+  async function clearNote() {
+    if (!confirm("메모장을 비울까요?")) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    const ok = await persist("", notePublic);
+    if (ok) setNote("");
+  }
+
   // 줄별 공개 메모(다른 멤버)
   const sharedByLine = new Map<number, SharedLineNote[]>();
   for (const s of shared.lineNotes) {
@@ -207,17 +233,30 @@ export function CodeNotes({
                       placeholder="이 줄에 대한 메모… (마크다운 지원)"
                       right={<PublicToggle value={draftPublic} onChange={setDraftPublic} size="xs" />}
                     />
-                    <div className="mt-2 flex justify-end gap-2">
-                      <button
-                        onClick={() => setActiveLine(null)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-medium"
-                        style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
-                      >
-                        닫기
-                      </button>
-                      <button onClick={saveLine} className="btn btn-primary !px-3 !py-1.5 text-xs">
-                        저장
-                      </button>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      {mine ? (
+                        <button
+                          onClick={() => deleteLine(line)}
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-medium"
+                          style={{ color: "var(--danger)" }}
+                        >
+                          삭제
+                        </button>
+                      ) : (
+                        <span />
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setActiveLine(null)}
+                          className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                          style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
+                        >
+                          닫기
+                        </button>
+                        <button onClick={saveLine} className="btn btn-primary !px-3 !py-1.5 text-xs">
+                          저장
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -225,13 +264,22 @@ export function CodeNotes({
                 {/* 내 라인 메모 */}
                 {mine && !isActive && (
                   <div
-                    onClick={() => openLine(line)}
-                    className={`mx-3 my-1 rounded-lg px-3 py-2 text-xs ${canEdit ? "cursor-pointer" : ""}`}
+                    className="mx-3 my-1 rounded-lg px-3 py-2 text-xs"
                     style={{ background: "var(--surface-2)", color: "var(--text)", fontFamily: "inherit" }}
                   >
                     <div className="mb-1 flex items-center gap-1.5 text-[11px]">
                       <span style={{ color: "var(--warning)" }}>✎ {line}번 줄</span>
                       {mine.isPublic && <span style={{ color: "var(--accent)" }}>🌐 공개</span>}
+                      {canEdit && (
+                        <span className="ml-auto flex gap-1.5">
+                          <button onClick={() => openLine(line)} className="hover:underline" style={{ color: "var(--text-secondary)" }}>
+                            수정
+                          </button>
+                          <button onClick={() => deleteLine(line)} className="hover:underline" style={{ color: "var(--danger)" }}>
+                            삭제
+                          </button>
+                        </span>
+                      )}
                     </div>
                     <Markdown compact>{mine.body}</Markdown>
                   </div>
@@ -264,7 +312,14 @@ export function CodeNotes({
       <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
         <div className="card p-5">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-semibold">📝 메모장</div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">📝 메모장</span>
+              {canEdit && note.trim() && (
+                <button onClick={clearNote} className="text-[11px] hover:underline" style={{ color: "var(--danger)" }}>
+                  비우기
+                </button>
+              )}
+            </div>
             {canEdit && <PublicToggle value={notePublic} onChange={onNotePublicChange} />}
           </div>
           <p className="mt-1 text-xs text-secondary">
