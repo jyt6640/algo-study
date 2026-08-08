@@ -8,7 +8,7 @@ import { currentUserId } from "@/lib/session";
 import { currentUserIsAdmin } from "@/lib/admin";
 import { getMembership } from "@/lib/membership";
 import { fmtPeriodRange } from "@/lib/format";
-import { LedgerEntry } from "../LedgerEntry";
+import { LedgerList } from "../LedgerList";
 import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 import { MemberManage } from "@/components/MemberManage";
 
@@ -126,11 +126,6 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
     .where(eq(schema.weeklyResults.groupId, groupId))
     .orderBy(desc(schema.weeklyResults.weekOf));
 
-  const ledgerByWeek = new Map<string, typeof ledger>();
-  for (const l of ledger) {
-    if (!ledgerByWeek.has(l.weekOf)) ledgerByWeek.set(l.weekOf, []);
-    ledgerByWeek.get(l.weekOf)!.push(l);
-  }
   const owed = ledger.filter((l) => !l.exempt && l.penaltyAmount > 0);
   const totalPenalty = owed.reduce((s, l) => s + l.penaltyAmount, 0);
   const unpaidTotal = owed.filter((l) => !l.paid).reduce((s, l) => s + l.penaltyAmount, 0);
@@ -289,23 +284,16 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
             <span className="ml-1">/ 누적 {totalPenalty.toLocaleString()}원</span>
           </span>
         </div>
-        {ledgerByWeek.size === 0 ? (
+        {ledger.length === 0 ? (
           <p className="mt-4 text-sm text-secondary">아직 마감된 기간이 없어요. 기간이 끝나면 벌금이 확정됩니다.</p>
         ) : (
-          <div className="mt-4 space-y-3">
-            {[...ledgerByWeek.entries()].map(([week, entries]) => (
-              <div key={week} className="card p-5">
-                <div className="mb-3 text-sm font-semibold text-secondary">
-                  {fmtPeriodRange(week, group.periodDays)}
-                </div>
-                <div className="space-y-2">
-                  {entries.map((e) => (
-                    <LedgerEntry key={e.id} groupId={groupId} entry={e} quota={group.quota} isOwner={isOwner} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <LedgerList
+            groupId={groupId}
+            entries={ledger}
+            quota={group.quota}
+            periodDays={group.periodDays}
+            isOwner={isOwner}
+          />
         )}
         {group.accountNumber ? (
           <div className="mt-4 card p-4 text-sm">

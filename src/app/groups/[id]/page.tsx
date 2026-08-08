@@ -11,7 +11,7 @@ import { fetchDailyChallenge } from "@/lib/leetcode";
 import { currentUserIsAdmin } from "@/lib/admin";
 import { PublicStudy } from "./PublicStudy";
 import { MemberPanel } from "./MemberPanel";
-import { LedgerEntry } from "./LedgerEntry";
+import { LedgerList } from "./LedgerList";
 import { LeaveButton } from "./LeaveButton";
 import { MemberCheatReport } from "@/components/MemberCheatReport";
 
@@ -153,11 +153,6 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     .where(eq(schema.weeklyResults.groupId, groupId))
     .orderBy(desc(schema.weeklyResults.weekOf));
 
-  const ledgerByWeek = new Map<string, typeof ledger>();
-  for (const l of ledger) {
-    if (!ledgerByWeek.has(l.weekOf)) ledgerByWeek.set(l.weekOf, []);
-    ledgerByWeek.get(l.weekOf)!.push(l);
-  }
   // 면제 제외한 총 벌금 / 미납 합계
   const owed = ledger.filter((l) => !l.exempt && l.penaltyAmount > 0);
   const totalPenalty = owed.reduce((s, l) => s + l.penaltyAmount, 0);
@@ -363,25 +358,18 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             <span className="ml-1">/ 누적 {totalPenalty.toLocaleString()}원</span>
           </span>
         </div>
-        {ledgerByWeek.size === 0 ? (
+        {ledger.length === 0 ? (
           <p className="mt-4 text-sm text-secondary">
             아직 마감된 기간이 없어요. {group.periodDays === 7 && !group.startDate ? "매주 월요일 00:00(KST)에 새 기간이 시작되고, 일요일 자정에 확정됩니다." : `${group.periodDays}일마다 마감되어 확정됩니다.`}
           </p>
         ) : (
-          <div className="mt-4 space-y-3">
-            {[...ledgerByWeek.entries()].map(([week, entries]) => (
-              <div key={week} className="card p-5">
-                <div className="mb-3 text-sm font-semibold text-secondary">
-                  {fmtPeriodRange(week, group.periodDays)}
-                </div>
-                <div className="space-y-2">
-                  {entries.map((e) => (
-                    <LedgerEntry key={e.id} groupId={groupId} entry={e} quota={group.quota} isOwner={isOwner} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <LedgerList
+            groupId={groupId}
+            entries={ledger}
+            quota={group.quota}
+            periodDays={group.periodDays}
+            isOwner={isOwner}
+          />
         )}
         {group.accountNumber ? (
           <div className="mt-4 card p-4 text-sm">
