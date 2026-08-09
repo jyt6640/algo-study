@@ -9,6 +9,7 @@ import { currentUserIsAdmin } from "@/lib/admin";
 import { getMembership } from "@/lib/membership";
 import { fmtPeriodRange } from "@/lib/format";
 import { LedgerList } from "../LedgerList";
+import { loadLedger, LEDGER_PERIOD_LIMIT } from "@/lib/ledgerQuery";
 import { DeleteSolveButton } from "@/components/DeleteSolveButton";
 import { MemberManage } from "@/components/MemberManage";
 
@@ -120,26 +121,13 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
   }
   const reportedSolves = [...reportsBySolve.values()];
 
-  // 벌금 장부
-  const ledger = await db
-    .select({
-      id: schema.weeklyResults.id,
-      weekOf: schema.weeklyResults.weekOf,
-      nickname: schema.users.nickname,
-      solvedCount: schema.weeklyResults.solvedCount,
-      metQuota: schema.weeklyResults.metQuota,
-      penaltyAmount: schema.weeklyResults.penaltyAmount,
-      exempt: schema.weeklyResults.exempt,
-      paid: schema.weeklyResults.paid,
-    })
-    .from(schema.weeklyResults)
-    .innerJoin(schema.users, eq(schema.users.id, schema.weeklyResults.userId))
-    .where(eq(schema.weeklyResults.groupId, groupId))
-    .orderBy(desc(schema.weeklyResults.weekOf));
-
-  const owed = ledger.filter((l) => !l.exempt && l.penaltyAmount > 0);
-  const totalPenalty = owed.reduce((s, l) => s + l.penaltyAmount, 0);
-  const unpaidTotal = owed.filter((l) => !l.paid).reduce((s, l) => s + l.penaltyAmount, 0);
+  // 벌금 장부 — 최근 기간만 읽고 합계는 DB 집계로
+  const {
+    rows: ledger,
+    hasMore: ledgerHasMore,
+    totalPenalty,
+    unpaidTotal,
+  } = await loadLedger(groupId);
 
   const stat = (label: string, value: string, color?: string) => (
     <div className="card p-4">
@@ -304,6 +292,8 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
             quota={group.quota}
             periodDays={group.periodDays}
             isOwner={isOwner}
+            hasMore={ledgerHasMore}
+            periodLimit={LEDGER_PERIOD_LIMIT}
           />
         )}
         {group.accountNumber ? (

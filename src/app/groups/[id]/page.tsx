@@ -13,6 +13,7 @@ import { currentUserIsAdmin } from "@/lib/admin";
 import { PublicStudy } from "./PublicStudy";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerList } from "./LedgerList";
+import { loadLedger, LEDGER_PERIOD_LIMIT } from "@/lib/ledgerQuery";
 import { LeaveButton } from "./LeaveButton";
 import { MemberCheatReport } from "@/components/MemberCheatReport";
 
@@ -149,27 +150,13 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   // 오늘의 LeetCode 문제 (1시간 캐시, 실패해도 무시)
   const daily = await fetchDailyChallenge().catch(() => null);
 
-  // 지난주까지 확정된 벌금 장부
-  const ledger = await db
-    .select({
-      id: schema.weeklyResults.id,
-      weekOf: schema.weeklyResults.weekOf,
-      nickname: schema.users.nickname,
-      solvedCount: schema.weeklyResults.solvedCount,
-      metQuota: schema.weeklyResults.metQuota,
-      penaltyAmount: schema.weeklyResults.penaltyAmount,
-      exempt: schema.weeklyResults.exempt,
-      paid: schema.weeklyResults.paid,
-    })
-    .from(schema.weeklyResults)
-    .innerJoin(schema.users, eq(schema.users.id, schema.weeklyResults.userId))
-    .where(eq(schema.weeklyResults.groupId, groupId))
-    .orderBy(desc(schema.weeklyResults.weekOf));
-
-  // 면제 제외한 총 벌금 / 미납 합계
-  const owed = ledger.filter((l) => !l.exempt && l.penaltyAmount > 0);
-  const totalPenalty = owed.reduce((s, l) => s + l.penaltyAmount, 0);
-  const unpaidTotal = owed.filter((l) => !l.paid).reduce((s, l) => s + l.penaltyAmount, 0);
+  // 벌금 장부 — 최근 기간만 읽고 합계는 DB 집계로 (전 기간을 매번 읽지 않게)
+  const {
+    rows: ledger,
+    hasMore: ledgerHasMore,
+    totalPenalty,
+    unpaidTotal,
+  } = await loadLedger(groupId);
 
   const msLeft = end.getTime() - Date.now();
   const daysLeft = Math.max(0, Math.floor(msLeft / 86400000));
@@ -382,6 +369,8 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
             quota={group.quota}
             periodDays={group.periodDays}
             isOwner={isOwner}
+            hasMore={ledgerHasMore}
+            periodLimit={LEDGER_PERIOD_LIMIT}
           />
         )}
         {group.accountNumber ? (
@@ -417,7 +406,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
                 <div className="font-medium">스터디 나가기</div>
                 <div className="text-secondary">
                   {isOwner
-                    ? "방장은 바로 나갈 수 없어요. 관리하기 → 설정에서 스터디를 삭제하거나 방장을 넘겨주세요."
+                    ? "방장은 바로 나갈 수 없어요. 설정에서 다른 멤버에게 방장을 넘기면 나갈 수 있어요."
                     : "나가면 다음 기간부터 집계에서 제외돼요. 이미 확정된 벌금은 장부에 남습니다."}
                 </div>
               </div>

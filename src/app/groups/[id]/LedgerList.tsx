@@ -29,12 +29,17 @@ export function LedgerList({
   quota,
   periodDays,
   isOwner,
+  hasMore,
+  periodLimit,
 }: {
   groupId: number;
   entries: Entry[];
   quota: number;
   periodDays: number;
   isOwner: boolean;
+  /** 서버가 읽어온 기간 범위 밖에 더 오래된 기록이 있는지 */
+  hasMore?: boolean;
+  periodLimit?: number;
 }) {
   const [visible, setVisible] = useState(PAGE);
   const [unpaidOnly, setUnpaidOnly] = useState(false);
@@ -138,6 +143,12 @@ export function LedgerList({
         >
           이전 기간 더 보기 ({remaining}개 남음)
         </button>
+      )}
+
+      {hasMore && remaining === 0 && (
+        <p className="mt-3 text-center text-xs text-secondary">
+          최근 {periodLimit ?? shown.length}개 기간만 표시합니다. 위 합계는 전체 기간 기준이에요.
+        </p>
       )}
     </div>
   );

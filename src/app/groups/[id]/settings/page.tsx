@@ -6,6 +6,7 @@ import { currentUserId } from "@/lib/session";
 import { SettingsForm } from "./SettingsForm";
 import { GroupAdmin } from "./GroupAdmin";
 import { GithubLink } from "./GithubLink";
+import { TransferOwner } from "@/components/TransferOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,15 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
         }}
       />
       <GithubLink groupId={groupId} repo={group.githubRepo} installationId={installation?.installationId ?? null} />
+
+      <section className="card p-6">
+        <h2 className="text-lg font-semibold">방장 위임</h2>
+        <p className="mt-1 text-sm text-secondary">
+          다른 멤버에게 방장을 넘겨요. 넘기면 나는 일반 멤버가 되고, 그때부터 스터디를 나갈 수 있어요.
+        </p>
+        <TransferOwner groupId={groupId} members={members} />
+      </section>
+
       <GroupAdmin groupId={groupId} members={members} />
     </main>
   );

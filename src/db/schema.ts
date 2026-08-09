@@ -107,7 +107,11 @@ export const memberships = pgTable(
     role: roleEnum("role").notNull().default("MEMBER"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("membership_user_group_uq").on(t.userId, t.groupId)],
+  (t) => [
+    uniqueIndex("membership_user_group_uq").on(t.userId, t.groupId),
+    // 대시보드가 매번 쓰는 "그룹의 멤버 조회" — 위 유니크 인덱스는 선행 컬럼이 userId 라 못 쓴다
+    index("membership_group_idx").on(t.groupId),
+  ],
 );
 
 // 두 경로(폴링/확장)에서 정규화되어 적재되는 원천 데이터
@@ -189,7 +193,11 @@ export const weeklyResults = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("weekly_user_group_week_uq").on(t.userId, t.groupId, t.weekOf)],
+  (t) => [
+    uniqueIndex("weekly_user_group_week_uq").on(t.userId, t.groupId, t.weekOf),
+    // 장부 조회는 groupId + 최신 기간순 — 유니크 인덱스(선행 userId)로는 커버 안 됨
+    index("weekly_group_week_idx").on(t.groupId, t.weekOf),
+  ],
 );
 
 export const submissionEvents = pgTable(
