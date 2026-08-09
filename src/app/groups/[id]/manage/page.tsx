@@ -53,26 +53,37 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
   let behindCount = 0;
   for (const m of members) memberNick.set(m.userId, m.nickname);
 
+  // 전 멤버의 이번 기간 풀이를 한 번의 쿼리로 (멤버 수만큼 왕복하지 않게)
+  const memberIds = members.map((m) => m.userId);
+  const periodSolves = memberIds.length
+    ? await db
+        .select({
+          id: schema.solveLogs.id,
+          userId: schema.solveLogs.userId,
+          slug: schema.solveLogs.problemSlug,
+          title: schema.solveLogs.problemTitle,
+        })
+        .from(schema.solveLogs)
+        .where(
+          and(
+            inArray(schema.solveLogs.userId, memberIds),
+            gte(schema.solveLogs.acceptedAt, start),
+            lt(schema.solveLogs.acceptedAt, end),
+          ),
+        )
+    : [];
+
   const periodSolveIds: number[] = [];
+  const solvedCount = new Map<number, number>();
+  for (const s of periodSolves) {
+    solveToMember.set(s.id, s.userId);
+    solveTitle.set(s.id, s.title ?? s.slug);
+    periodSolveIds.push(s.id);
+    solvedCount.set(s.userId, (solvedCount.get(s.userId) ?? 0) + 1);
+  }
   for (const m of members) {
-    const weekSolves = await db
-      .select({ id: schema.solveLogs.id, slug: schema.solveLogs.problemSlug, title: schema.solveLogs.problemTitle })
-      .from(schema.solveLogs)
-      .where(
-        and(
-          eq(schema.solveLogs.userId, m.userId),
-          gte(schema.solveLogs.acceptedAt, start),
-          lt(schema.solveLogs.acceptedAt, end),
-        ),
-      );
-    for (const s of weekSolves) {
-      solveToMember.set(s.id, m.userId);
-      solveTitle.set(s.id, s.title ?? s.slug);
-      periodSolveIds.push(s.id);
-    }
-    const solved = weekSolves.length;
-    const pen = calcPenalty(group.penaltyType, group.penaltyAmount, group.quota, solved);
-    periodPenaltyTotal += pen;
+    const solved = solvedCount.get(m.userId) ?? 0;
+    periodPenaltyTotal += calcPenalty(group.penaltyType, group.penaltyAmount, group.quota, solved);
     if (solved < group.quota) behindCount += 1;
   }
 

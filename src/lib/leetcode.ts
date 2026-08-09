@@ -113,7 +113,8 @@ export async function fetchFullProfile(username: string): Promise<LeetCodeFullPr
       Referer: `https://leetcode.com/u/${encodeURIComponent(username)}/`,
     },
     body: JSON.stringify({ query: FULL_QUERY, variables: { username, y1, y2: y1 - 1 } }),
-    cache: "no-store",
+    // 프로필·잔디는 5분 캐시 — 페이지 로드마다 LeetCode 를 때리지 않게
+    next: { revalidate: 300 },
   });
   if (!res.ok) throw new Error(`LeetCode GQL ${res.status}`);
 

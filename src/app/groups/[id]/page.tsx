@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { db, schema } from "@/db";
 import { currentPeriod } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
@@ -26,10 +27,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
   if (!group) notFound();
 
   const viewerId = await currentUserId();
-  // 스터디 열면 내 LeetCode + 전 멤버 최근 풀이를 자동 반영 (쓰로틀, 실패해도 무시).
-  // 확장을 안 쓰는 멤버의 풀이도 대시보드를 열 때 실시간처럼 반영된다.
-  if (viewerId) await maybeRefreshLeetcode(viewerId).catch(() => {});
-  await maybeRefreshGroupMembers(groupId).catch(() => {});
+  // LeetCode 폴링은 응답을 막지 않도록 렌더 후(백그라운드)에 돌린다.
+  // 결과는 DB에 쌓이고 다음 로드에 반영된다 — 첫 화면이 폴링을 기다리지 않는다.
+  after(async () => {
+    if (viewerId) await maybeRefreshLeetcode(viewerId).catch(() => {});
+    await maybeRefreshGroupMembers(groupId).catch(() => {});
+  });
 
   const [viewerMembership] = viewerId
     ? await db
@@ -68,12 +71,13 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
     .where(eq(schema.memberships.groupId, groupId));
 
-  const rows = await Promise.all(
-    members.map(async (m) => {
-      // 이번 주 푼 문제 목록 (slug 는 유저당 유일하므로 이미 distinct)
-      const weekSolves = await db
+  // 이번 기간 전 멤버의 풀이를 한 번의 쿼리로 가져와 메모리에서 묶는다 (멤버 수만큼 왕복하지 않게)
+  const memberIds = members.map((m) => m.userId);
+  const periodSolves = memberIds.length
+    ? await db
         .select({
           id: schema.solveLogs.id,
+          userId: schema.solveLogs.userId,
           slug: schema.solveLogs.problemSlug,
           title: schema.solveLogs.problemTitle,
           acceptedAt: schema.solveLogs.acceptedAt,
@@ -81,21 +85,30 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         .from(schema.solveLogs)
         .where(
           and(
-            eq(schema.solveLogs.userId, m.userId),
+            inArray(schema.solveLogs.userId, memberIds),
             gte(schema.solveLogs.acceptedAt, start),
             lt(schema.solveLogs.acceptedAt, end),
           ),
         )
-        .orderBy(desc(schema.solveLogs.acceptedAt));
-      const solved = weekSolves.length;
-      return {
-        ...m,
-        solved,
-        weekSolves,
-        projectedPenalty: calcPenalty(group.penaltyType, group.penaltyAmount, group.quota, solved),
-      };
-    }),
-  );
+        .orderBy(desc(schema.solveLogs.acceptedAt))
+    : [];
+
+  const solvesByMember = new Map<number, typeof periodSolves>();
+  for (const s of periodSolves) {
+    if (!solvesByMember.has(s.userId)) solvesByMember.set(s.userId, []);
+    solvesByMember.get(s.userId)!.push(s);
+  }
+
+  const rows = members.map((m) => {
+    const weekSolves = solvesByMember.get(m.userId) ?? [];
+    const solved = weekSolves.length;
+    return {
+      ...m,
+      solved,
+      weekSolves,
+      projectedPenalty: calcPenalty(group.penaltyType, group.penaltyAmount, group.quota, solved),
+    };
+  });
   rows.sort((a, b) => b.solved - a.solved);
 
   // 이번 기간 예상 총 벌금 (미달 멤버 합산)
