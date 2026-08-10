@@ -85,7 +85,9 @@ export default async function Home() {
     <main className="mx-auto max-w-2xl px-6 py-14">
       <header className="flex items-center justify-between">
         <h1 className="text-3xl font-semibold tracking-tight">
-          7일 <span className="accent">7솔</span>
+          <Link href="/" className="transition-opacity hover:opacity-70">
+            7일 <span className="accent">7솔</span>
+          </Link>
         </h1>
         <div className="flex items-center gap-3">
           <Link href="/me" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 hover:bg-[var(--surface-2)]">

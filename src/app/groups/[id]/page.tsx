@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { db, schema } from "@/db";
-import { currentPeriod } from "@/lib/week";
+import { periodByOffset } from "@/lib/week";
 import { calcPenalty } from "@/lib/penalty";
 import { currentUserId } from "@/lib/session";
 import { fmtDateTime, fmtPeriodRange, fmtDayLabel } from "@/lib/format";
@@ -13,16 +13,27 @@ import { currentUserIsAdmin } from "@/lib/admin";
 import { PublicStudy } from "./PublicStudy";
 import { MemberPanel } from "./MemberPanel";
 import { LedgerList } from "./LedgerList";
+import { PeriodNav } from "./PeriodNav";
 import { loadLedger, LEDGER_PERIOD_LIMIT } from "@/lib/ledgerQuery";
 import { LeaveButton } from "./LeaveButton";
 import { MemberCheatReport } from "@/components/MemberCheatReport";
 
 export const dynamic = "force-dynamic";
 
-export default async function GroupDashboard({ params }: { params: Promise<{ id: string }> }) {
+export default async function GroupDashboard({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ offset?: string }>;
+}) {
   const { id } = await params;
   const groupId = Number(id);
   if (!Number.isFinite(groupId)) notFound();
+
+  // 지난 기간 보기 (0=이번, -1=직전 …). 미래는 볼 수 없다.
+  const rawOffset = Number((await searchParams).offset ?? 0);
+  const offset = Number.isFinite(rawOffset) ? Math.min(0, Math.max(-520, Math.trunc(rawOffset))) : 0;
 
   const [group] = await db.select().from(schema.groups).where(eq(schema.groups.id, groupId)).limit(1);
   if (!group) notFound();
@@ -64,7 +75,12 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
     : [];
   const viewerLinked = Boolean(viewer?.leetcode || viewer?.programmers);
 
-  const { start, end, periodOf: weekOf, notStarted, ended } = currentPeriod(new Date(), group);
+  const now = new Date();
+  const { start, end, periodOf: weekOf, notStarted, ended } = periodByOffset(now, group, offset);
+  const viewingPast = offset < 0;
+  // 그룹 생성 이전 기간까지는 거슬러 올라가지 않게
+  const prevStart = periodByOffset(now, group, offset - 1).start;
+  const canGoBack = prevStart >= new Date(group.createdAt.getTime() - 86400000);
 
   const members = await db
     .select({ userId: schema.memberships.userId, nickname: schema.users.nickname, role: schema.memberships.role })
@@ -179,6 +195,10 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
               <>
                 시작 예정 · <b style={{ color: "var(--text)" }}>{fmtDayLabel(weekOf)}부터</b>
               </>
+            ) : viewingPast ? (
+              <>
+                지난 기록 <b style={{ color: "var(--text)" }}>{fmtPeriodRange(weekOf, group.periodDays)}</b>
+              </>
             ) : (
               <>
                 이번 기간 <b style={{ color: "var(--text)" }}>{fmtPeriodRange(weekOf, group.periodDays)}</b> · 마감까지{" "}
@@ -222,18 +242,26 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         </div>
       </div>
 
+      <PeriodNav
+        groupId={groupId}
+        offset={offset}
+        periodOf={weekOf}
+        periodDays={group.periodDays}
+        canGoBack={canGoBack}
+      />
+
       {!notStarted && !ended && (
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="card p-5">
-            <div className="text-xs text-secondary">이번 기간 예상 총 벌금</div>
+            <div className="text-xs text-secondary">{viewingPast ? "이 기간 벌금" : "이번 기간 예상 총 벌금"}</div>
             <div className="mt-1 text-2xl font-semibold tabular-nums" style={{ color: periodPenaltyTotal > 0 ? "var(--warning)" : "var(--success)" }}>
               {periodPenaltyTotal.toLocaleString()}원
             </div>
             <div className="mt-1 text-xs text-secondary">
-              {behindCount > 0 ? `${behindCount}명 미달 · 마감까지 반영` : "전원 달성 중 🎉"}
+              {behindCount > 0 ? `${behindCount}명 미달${viewingPast ? "" : " · 마감까지 반영"}` : "전원 달성 🎉"}
             </div>
           </div>
-          {daily && (
+          {daily && !viewingPast && (
             <a href={daily.url} target="_blank" rel="noreferrer" className="card group p-5 transition hover:brightness-105">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-secondary">오늘의 LeetCode 문제</span>
@@ -264,7 +292,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      {isMember && !ended && (
+      {isMember && !ended && !viewingPast && (
         <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border)" }}>
           <div className="text-sm">
             <div className="font-medium">📖 책·오프라인 문제도 인정</div>
@@ -295,7 +323,7 @@ export default async function GroupDashboard({ params }: { params: Promise<{ id:
                   </Link>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isMember && r.userId !== viewerId && r.weekSolves.length > 0 && (
+                  {isMember && !viewingPast && r.userId !== viewerId && r.weekSolves.length > 0 && (
                     <MemberCheatReport
                       groupId={groupId}
                       nickname={r.nickname}

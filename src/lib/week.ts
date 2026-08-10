@@ -129,3 +129,28 @@ export function endedPeriods(now: Date, g: GroupSchedule): Array<{ start: Date; 
   }
   return out;
 }
+
+/**
+ * 현재 기간에서 offset 만큼 떨어진 기간 (0=이번, -1=직전, +1=다음).
+ * 지난 기간의 기록을 다시 볼 때 사용한다.
+ */
+export function periodByOffset(now: Date, g: GroupSchedule, offset: number): Period {
+  const cur = currentPeriod(now, g);
+  if (offset === 0) return cur;
+
+  const days = g.startDate ? Math.max(1, g.periodDays) : 7;
+  const periodOf = addDaysStr(cur.periodOf, offset * days);
+  const start = tzMidnightUtc(periodOf, g.timezone);
+  const end = tzMidnightUtc(addDaysStr(periodOf, days), g.timezone);
+
+  const startedAt = g.startDate ? tzMidnightUtc(g.startDate, g.timezone) : null;
+  const endBoundary = g.endDate ? tzMidnightUtc(addDaysStr(g.endDate, 1), g.timezone) : null;
+
+  return {
+    start,
+    end,
+    periodOf,
+    notStarted: startedAt ? start < startedAt : false,
+    ended: endBoundary ? start >= endBoundary : false,
+  };
+}
