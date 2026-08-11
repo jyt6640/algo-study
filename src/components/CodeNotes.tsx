@@ -167,7 +167,7 @@ export function CodeNotes({
   const noteCount = lineNotes.size;
 
   return (
-    <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="mt-6 grid gap-5 lg:grid-cols-2">
       {/* 코드 */}
       <div className="min-w-0">
         <div className="mb-2 flex items-center justify-between">

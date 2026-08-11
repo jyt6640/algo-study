@@ -71,7 +71,7 @@ export default async function SolvePage({
   const codeLines = code ? splitHighlightedLines(highlightCode(code.code, code.language)) : [];
 
   return (
-    <main className={`rise mx-auto px-6 py-14 ${code ? "max-w-5xl" : "max-w-2xl"}`}>
+    <main className={`rise mx-auto px-4 py-14 sm:px-5 ${code ? "max-w-7xl" : "max-w-2xl"}`}>
       <div className="flex items-center gap-3 text-sm">
         <Link href={`/groups/${groupId}`} className="text-secondary hover:underline">
           ← 대시보드
