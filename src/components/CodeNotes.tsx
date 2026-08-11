@@ -60,7 +60,6 @@ export function CodeNotes({
   const [draft, setDraft] = useState("");
   const [draftPublic, setDraftPublic] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -94,7 +93,6 @@ export function CodeNotes({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(line ? { line, body, isPublic } : { body, isPublic }),
     });
-    if (res.ok) setSavedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
     return res.ok;
   }
 
@@ -230,7 +228,8 @@ export function CodeNotes({
                       rows={3}
                       maxLength={10000}
                       compact
-                      placeholder="이 줄에 대한 메모… (마크다운 지원)"
+                      showHelp={false}
+                      placeholder="이 줄에 대한 메모…"
                       right={<PublicToggle value={draftPublic} onChange={setDraftPublic} size="xs" />}
                     />
                     <div className="mt-2 flex items-center justify-between gap-2">
@@ -322,10 +321,6 @@ export function CodeNotes({
             </div>
             {canEdit && <PublicToggle value={notePublic} onChange={onNotePublicChange} />}
           </div>
-          <p className="mt-1 text-xs text-secondary">
-            {notePublic ? "같은 스터디 멤버가 볼 수 있어요." : "나만 보여요."} 자동 저장됩니다.
-            {savedAt && <span className="ml-1">· {savedAt} 저장됨</span>}
-          </p>
           {canEdit ? (
             <div className="mt-3">
               <MarkdownEditor
@@ -335,11 +330,8 @@ export function CodeNotes({
                 maxLength={10000}
                 disabled={!loaded}
                 compact
-                placeholder={
-                  loaded
-                    ? "## 아이디어\n- 투 포인터로 O(n)\n\n## 막혔던 부분\n`while` 조건에서 경계 처리"
-                    : "불러오는 중…"
-                }
+                showHelp={false}
+                placeholder={loaded ? undefined : "불러오는 중…"}
               />
             </div>
           ) : (

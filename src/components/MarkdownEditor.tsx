@@ -12,6 +12,7 @@ export function MarkdownEditor({
   maxLength = 20000,
   disabled,
   compact,
+  showHelp = true,
   right,
 }: {
   value: string;
@@ -21,6 +22,7 @@ export function MarkdownEditor({
   maxLength?: number;
   disabled?: boolean;
   compact?: boolean;
+  showHelp?: boolean;
   right?: React.ReactNode; // 탭 줄 오른쪽에 놓을 요소(공개 토글 등)
 }) {
   const [preview, setPreview] = useState(false);
@@ -77,10 +79,12 @@ export function MarkdownEditor({
         />
       )}
 
-      <p className="mt-1.5 text-[11px] text-secondary">
-        마크다운 지원 — <code>**굵게**</code> <code>## 제목</code> <code>- 목록</code> <code>`코드`</code>{" "}
-        <code>```java</code> 코드블록 <code>| 표 |</code>
-      </p>
+      {showHelp && (
+        <p className="mt-1.5 text-[11px] text-secondary">
+          마크다운 지원 — <code>**굵게**</code> <code>## 제목</code> <code>- 목록</code> <code>`코드`</code>{" "}
+          <code>```java</code> 코드블록 <code>| 표 |</code>
+        </p>
+      )}
     </div>
   );
 }
