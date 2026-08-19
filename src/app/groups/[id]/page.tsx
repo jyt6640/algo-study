@@ -126,7 +126,7 @@ export default async function GroupDashboard({
       projectedPenalty: calcPenalty(group.penaltyType, group.penaltyAmount, group.quota, solved),
     };
   });
-  rows.sort((a, b) => b.solved - a.solved);
+  rows.sort((a, b) => Number(b.userId === viewerId) - Number(a.userId === viewerId) || b.solved - a.solved);
 
   // 이번 기간 예상 총 벌금 (미달 멤버 합산)
   const periodPenaltyTotal = rows.reduce((s, r) => s + r.projectedPenalty, 0);
