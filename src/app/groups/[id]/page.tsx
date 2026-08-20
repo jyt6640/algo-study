@@ -180,8 +180,8 @@ export default async function GroupDashboard({
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14">
-      <div className="rise flex items-start justify-between gap-4">
-        <div>
+      <div className="rise flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-3xl font-semibold tracking-tight">
             {group.name}
             {!group.active && (
@@ -220,8 +220,8 @@ export default async function GroupDashboard({
             )}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-col gap-2 sm:items-end">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 whitespace-nowrap text-sm">
             <Link href="/" className="text-secondary hover:underline">
               홈
             </Link>
@@ -293,7 +293,7 @@ export default async function GroupDashboard({
       )}
 
       {isMember && !ended && !viewingPast && (
-        <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border)" }}>
+        <div className="mt-6 flex flex-col items-stretch gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--border)" }}>
           <div className="text-sm">
             <div className="font-medium">📖 책·오프라인 문제도 인정</div>
             <div className="text-secondary">LeetCode·프로그래머스에 없는 문제는 직접 기입하세요.</div>
@@ -308,20 +308,23 @@ export default async function GroupDashboard({
         {rows.map((r) => {
           const met = r.solved >= group.quota;
           return (
-            <div key={r.userId} className="card p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/groups/${groupId}/members/${r.userId}`}
-                    className="group flex items-center gap-2 font-semibold"
-                  >
-                    <span className="group-hover:underline">{r.nickname}</span>
-                    {r.role === "OWNER" && <span className="accent text-xs">방장</span>}
-                    <span className="text-xs text-secondary opacity-0 transition-opacity group-hover:opacity-100">
-                      문제 보기 →
+            <div key={r.userId} className="card p-5" style={r.userId === viewerId ? { borderColor: "var(--accent)" } : undefined}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                  href={`/groups/${groupId}/members/${r.userId}`}
+                  className="group flex min-w-0 flex-wrap items-center gap-2 font-semibold"
+                >
+                  <span className="group-hover:underline">{r.nickname}</span>
+                  {r.userId === viewerId && (
+                    <span className="accent rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2 py-0.5 text-[11px] font-medium">
+                      내 진행
                     </span>
-                  </Link>
-                </div>
+                  )}
+                  {r.role === "OWNER" && <span className="accent text-xs">방장</span>}
+                  <span className="text-xs text-secondary opacity-0 transition-opacity group-hover:opacity-100">
+                    문제 보기 →
+                  </span>
+                </Link>
                 <div className="flex items-center gap-2">
                   {isMember && !viewingPast && r.userId !== viewerId && r.weekSolves.length > 0 && (
                     <MemberCheatReport
