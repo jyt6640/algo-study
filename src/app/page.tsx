@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, eq, notInArray, sql } from "drizzle-orm";
 import { auth, signIn, signOut } from "@/auth";
 import { db, schema } from "@/db";
-import { HomeForms } from "./HomeForms";
+import { HomeForms, JoinStudyForm } from "./HomeForms";
 import { PlatformLink } from "@/components/PlatformLink";
 import { currentUserIsAdmin } from "@/lib/admin";
 
@@ -166,11 +166,15 @@ export default async function Home() {
         )}
       </section>
 
+      <section className="mt-10">
+        <JoinStudyForm />
+      </section>
+
       {discover.length > 0 && (
         <section className="mt-10">
           <h2 className="text-xl font-semibold">둘러보기</h2>
           <p className="mt-1 text-sm text-secondary">
-            지금 활성화된 스터디예요. 참여하려면 멤버에게 <b>초대코드</b>를 받아 아래에서 입력하세요.
+            지금 활성화된 스터디예요. 참여하려면 멤버에게 <b>초대코드</b>를 받아 위에서 입력하세요.
           </p>
           <div className="mt-4 space-y-2">
             {discover.map((d) => (

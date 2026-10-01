@@ -39,24 +39,6 @@ export function HomeForms() {
     }
   }
 
-  async function joinGroup(form: FormData) {
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await fetch("/api/groups/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteCode: form.get("inviteCode") }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "가입 실패");
-      router.push(`/groups/${data.groupId}`);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "오류");
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="grid gap-5">
       {err && (
@@ -116,16 +98,51 @@ export function HomeForms() {
         <p className="mt-2 text-xs text-secondary">계좌 등록·상세 설정은 만든 뒤 설정에서 할 수 있어요.</p>
       </form>
 
-      <form action={joinGroup} className={card}>
-        <h2 className="mb-4 text-lg font-semibold">초대코드로 참여</h2>
-        <label className={label}>초대코드</label>
-        <div className="flex gap-2">
-          <input name="inviteCode" required className={`${input} uppercase`} placeholder="AB2C9X" />
-          <button className="btn btn-primary shrink-0" disabled={busy}>
-            참여
-          </button>
-        </div>
-      </form>
     </div>
+  );
+}
+
+export function JoinStudyForm() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function joinGroup(form: FormData) {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/groups/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteCode: form.get("inviteCode") }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "가입 실패");
+      router.push(`/groups/${data.groupId}`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "오류");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form action={joinGroup} className={card}>
+      <h2 className="mb-4 text-lg font-semibold">초대코드로 참여</h2>
+      {err && (
+        <p
+          className="mb-4 rounded-xl px-4 py-2 text-sm"
+          style={{ background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)" }}
+        >
+          {err}
+        </p>
+      )}
+      <label htmlFor="inviteCode" className={label}>초대코드</label>
+      <div className="flex gap-2">
+        <input id="inviteCode" name="inviteCode" required className={`${input} uppercase`} placeholder="AB2C9X" />
+        <button className="btn btn-primary shrink-0" disabled={busy}>
+          참여
+        </button>
+      </div>
+    </form>
   );
 }
