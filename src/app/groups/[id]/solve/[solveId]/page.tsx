@@ -8,6 +8,7 @@ import { currentUserId } from "@/lib/session";
 import { getMembership } from "@/lib/membership";
 import { MembersOnly } from "@/components/MembersOnly";
 import { ManualCodeEntry } from "@/components/ManualCodeEntry";
+import { ImportCode } from "@/components/ImportCode";
 import { highlightCode } from "@/components/CodeBlock";
 import { splitHighlightedLines } from "@/lib/highlightLines";
 import { CodeNotes } from "@/components/CodeNotes";
@@ -62,12 +63,15 @@ export default async function SolvePage({
     .limit(1);
   if (!solve) notFound();
 
-  const [code] = await db
+  const [submission] = await db
     .select()
     .from(schema.submissions)
     .where(eq(schema.submissions.solveLogId, sid))
     .limit(1);
 
+  const code = submission?.code.trim() ? submission : undefined;
+  const isOwner = viewerId === solve.userId;
+  const isLeetCode = solve.platform === "LEETCODE";
   const codeLines = code ? splitHighlightedLines(highlightCode(code.code, code.language)) : [];
 
   return (
@@ -125,7 +129,7 @@ export default async function SolvePage({
         )}
       </div>
 
-      {viewerId === solve.userId && (
+      {isOwner && (
         <div className="mt-3">
           <DeleteSolveButton
             groupId={groupId}
@@ -152,13 +156,32 @@ export default async function SolvePage({
           canEdit={Boolean(viewerId)}
         />
       ) : (
-        <div className="card mt-6 p-6 text-sm text-secondary">
-          아직 이 문제의 코드가 없어요. 아래에 직접 붙여넣어 저장하거나 확장프로그램으로 자동 업로드할 수 있어요.
-        </div>
+        <section className="card mt-6 p-6">
+          <h2 className="text-sm font-semibold">저장된 풀이 코드가 없어요</h2>
+          {isLeetCode ? (
+            <p className="mt-1 text-sm text-secondary">
+              {isOwner
+                ? "LeetCode에 로그인한 상태에서 최근 정답 코드를 가져오거나, 아래에 직접 붙여넣을 수 있어요."
+                : "풀이 작성자가 코드를 올리면 볼 수 있어요."}
+            </p>
+          ) : isOwner && (
+            <p className="mt-1 text-sm text-secondary">아래에 직접 붙여넣어 저장할 수 있어요.</p>
+          )}
+          {isOwner && isLeetCode && (
+            <div className="mt-3">
+              <ImportCode key={sid} problemSlug={solve.slug} />
+            </div>
+          )}
+        </section>
       )}
 
-      {viewerId === solve.userId && (
-        <ManualCodeEntry solveId={sid} initialCode={code?.code} initialLanguage={code?.language} />
+      {isOwner && (
+        <ManualCodeEntry
+          key={`${sid}:${code?.submittedAt?.getTime() ?? (code ? "saved" : "empty")}`}
+          solveId={sid}
+          initialCode={code?.code}
+          initialLanguage={code?.language}
+        />
       )}
     </main>
   );
