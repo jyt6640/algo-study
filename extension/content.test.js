@@ -6,10 +6,10 @@ function jsonResponse(body) {
   return { ok: true, status: 200, json: async () => body };
 }
 
-async function loadUploadHarness() {
+async function loadUploadHarness({ deferIngest = false } = {}) {
   const listeners = [];
   const requests = [];
-  let ingestPayload;
+  const ingests = [];
   let button;
 
   const window = {
@@ -35,8 +35,8 @@ async function loadUploadHarness() {
         getURL: () => "chrome-extension://test/inject.js",
         lastError: null,
         sendMessage: (message, callback) => {
-          ingestPayload = message.payload;
-          callback({ ok: true, isNew: true });
+          ingests.push({ payload: message.payload, reply: callback });
+          if (!deferIngest) callback({ ok: true, isNew: true, codeSaved: true });
         },
       },
       storage: { local: { get: async () => ({ token: "token" }) } },
@@ -73,6 +73,7 @@ async function loadUploadHarness() {
     location: { pathname: "/problems/two-sum/" },
     setInterval: () => 0,
     setTimeout: () => 0,
+    clearTimeout: () => undefined,
     window,
   };
 
@@ -81,7 +82,12 @@ async function loadUploadHarness() {
 
   return {
     click: () => button.click(),
-    ingestPayload: () => ingestPayload,
+    ingestPayload: () => ingests.at(-1)?.payload,
+    ingests,
+    accept: (submissionId, code) => window.postMessage({
+      type: "ALGOSTUDY_SUBMIT_RESULT", slug: "two-sum", accepted: true, submissionId, code, language: "javascript",
+    }),
+    label: () => button.textContent,
     requests,
   };
 }
@@ -99,5 +105,24 @@ describe("LeetCode manual upload", () => {
       language: "javascript",
     });
     expect(harness.ingestPayload().acceptedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe("LeetCode automatic upload", () => {
+  it("waits for code storage and also uploads the next accepted attempt for the same problem", async () => {
+    const harness = await loadUploadHarness({ deferIngest: true });
+
+    harness.accept("42", "first()");
+    await Promise.resolve();
+    expect(harness.ingests).toHaveLength(1);
+    expect(harness.label()).not.toContain("업로드됨");
+    harness.ingests[0].reply({ ok: true, codeSaved: true });
+    expect(harness.label()).toContain("업로드됨");
+
+    harness.accept("43", "second()");
+    await Promise.resolve();
+    expect(harness.ingestPayload()).toMatchObject({ problemSlug: "two-sum", code: "second()" });
+    harness.ingests[1].reply({ ok: true, codeSaved: false });
+    expect(harness.label()).not.toContain("업로드됨");
   });
 });

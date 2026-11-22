@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "7일 7솔 — 알고리즘 스터디 업로더",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "LeetCode·프로그래머스에서 정답 처리되면 제출 코드를 자동으로 감지해 스터디에 업로드합니다.",
   "icons": {
     "16": "icons/icon16.png",
@@ -29,9 +29,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://leetcode.com/problems/*"],
+      "matches": ["https://leetcode.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://leetcode.com/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     },
     {
       "matches": ["https://school.programmers.co.kr/learn/courses/*/lessons/*"],
@@ -45,10 +51,6 @@
     }
   ],
   "web_accessible_resources": [
-    {
-      "resources": ["inject.js"],
-      "matches": ["https://leetcode.com/*"]
-    },
     {
       "resources": ["inject-programmers.js"],
       "matches": ["https://school.programmers.co.kr/*"]

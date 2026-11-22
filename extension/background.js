@@ -13,6 +13,15 @@ async function leetcodeGql(query, variables) {
   return response.json();
 }
 
+async function fetchLeetCodeSubmission(id) {
+  const result = await leetcodeGql("query d($id:Int!){submissionDetails(submissionId:$id){code lang{name}}}", { id });
+  const detail = result?.data?.submissionDetails;
+  return {
+    code: typeof detail?.code === "string" ? detail.code : "",
+    language: typeof detail?.lang?.name === "string" ? detail.lang.name : "",
+  };
+}
+
 async function fetchRecentLeetcode() {
   const user = await leetcodeGql("{ userStatus { isSignedIn username } }");
   const status = user?.data?.userStatus;
@@ -30,11 +39,7 @@ async function fetchRecentLeetcode() {
     let code = "";
     let language = "";
     try {
-      const detail = await leetcodeGql("query d($id:Int!){submissionDetails(submissionId:$id){code lang{name}}}", {
-        id: Number(submission.id),
-      });
-      code = detail?.data?.submissionDetails?.code || "";
-      language = detail?.data?.submissionDetails?.lang?.name || "";
+      ({ code, language } = await fetchLeetCodeSubmission(Number(submission.id)));
     } catch {
       code = "";
       language = "";
@@ -61,22 +66,33 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== "ALGOSTUDY_INGEST") return;
 
   (async () => {
-    const stored = await chrome.storage.local.get(["apiBase", "token"]);
-    const apiBase = stored.apiBase || API_BASE;
-    const token = stored.token;
-    if (!token) {
-      sendResponse({ ok: false, error: "확장 팝업에서 연동 토큰을 먼저 입력하세요." });
-      return;
-    }
-
     try {
+      const stored = await chrome.storage.local.get(["apiBase", "token"]);
+      const apiBase = stored.apiBase || API_BASE;
+      const token = stored.token;
+      if (!token) {
+        sendResponse({ ok: false, error: "확장 팝업에서 연동 토큰을 먼저 입력하세요." });
+        return;
+      }
+
+      let payload = msg.payload;
+      const submissionId = Number(msg.leetcodeSubmissionId);
+      if (Number.isSafeInteger(submissionId) && submissionId > 0 && !payload.code?.trim()) {
+        const { code, language } = await fetchLeetCodeSubmission(submissionId);
+        if (!code.trim()) {
+          sendResponse({ ok: false, error: "LeetCode에서 제출 코드를 읽지 못했어요. 로그인 상태를 확인해 주세요." });
+          return;
+        }
+        payload = { ...payload, code, language: language || payload.language };
+      }
+
       const res = await fetch(`${apiBase.replace(/\/$/, "")}/api/ingest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(msg.payload),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) sendResponse({ ok: false, error: data.error || `HTTP ${res.status}` });
