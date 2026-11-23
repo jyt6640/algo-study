@@ -156,10 +156,15 @@
       </div>
     </details>
 
-    <p class="sub" style="margin-top: 10px">
-      LeetCode 문제 페이지에서 Accepted 후 우측 하단 「📤 스터디 업로드」로 코드까지 남길 수 있어요.
-    </p>
+    <footer style="margin-top: 12px">
+      <div class="row">
+        <span class="sub" id="extensionVersion"></span>
+        <button class="btn-ghost" id="checkUpdate" type="button">업데이트 확인</button>
+      </div>
+      <p class="sub" id="updateStatus" role="status" style="margin: 0"></p>
+    </footer>
 
     <script src="popup.js"></script>
+    <script src="popup-update.js"></script>
   </body>
 </html>
