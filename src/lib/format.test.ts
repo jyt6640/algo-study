@@ -35,15 +35,15 @@ describe("solvesToPlatformCalendar / combineHeatmap", () => {
     const { total, breakdown } = solvesToPlatformCalendar(solves, KST);
     const key = String(Math.floor(Date.UTC(2026, 6, 21) / 1000));
     expect(total[key]).toBe(3);
-    expect(breakdown[key]).toEqual({ leetcode: 1, programmers: 2 });
+    expect(breakdown[key]).toEqual({ leetcode: 1, programmers: 2, baekjoon: 0 });
   });
 
-  it("combineHeatmap: LeetCode 캘린더 + 프로그래머스 날짜 병합", () => {
+  it("LeetCode, 프로그래머스, 백준 풀이를 구분해서 잔디에 합산한다", () => {
     const key = String(Math.floor(Date.UTC(2026, 6, 21) / 1000));
     const lc = { [key]: 4 };
     const pgDates = [new Date("2026-07-21T02:00:00Z")];
-    const { total, breakdown } = combineHeatmap(lc, pgDates, KST);
-    expect(total[key]).toBe(5);
-    expect(breakdown[key]).toEqual({ leetcode: 4, programmers: 1 });
+    const { total, breakdown } = combineHeatmap(lc, { programmers: pgDates, baekjoon: pgDates }, KST);
+    expect(total[key]).toBe(6);
+    expect(breakdown[key]).toEqual({ leetcode: 4, programmers: 1, baekjoon: 1 });
   });
 });

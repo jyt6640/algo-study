@@ -4,6 +4,7 @@
 // calendar: unix초(UTC 자정) -> 그 날의 제출 수.
 
 import { useRef, useState } from "react";
+import type { DayBreakdown } from "@/lib/format";
 
 const DAY = 86400000;
 const CELL = 12;
@@ -21,7 +22,7 @@ function grassVar(count: number): string {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 type Hover = { x: number; y: number; label: string } | null;
-type Breakdown = Record<string, { leetcode: number; programmers: number }>;
+type Breakdown = Record<string, DayBreakdown>;
 
 export function Heatmap({
   calendar,
@@ -61,7 +62,7 @@ export function Heatmap({
       const d = new Date(dayMs);
       const b = breakdown?.[String(key)];
       const label = b
-        ? `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · 리트코드 ${b.leetcode} · 프로그래머스 ${b.programmers}`
+        ? `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · 리트코드 ${b.leetcode} · 프로그래머스 ${b.programmers}${b.baekjoon ? ` · 백준 ${b.baekjoon}` : ""}`
         : `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 · ${count > 0 ? `${count}회 제출` : "제출 없음"}`;
       cells.push(
         <rect

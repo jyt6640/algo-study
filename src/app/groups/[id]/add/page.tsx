@@ -9,8 +9,15 @@ import { ManualSolveForm } from "./ManualSolveForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function AddSolvePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AddSolvePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ platform?: string | string[] }>;
+}) {
   const { id } = await params;
+  const { platform } = await searchParams;
   const groupId = Number(id);
   if (!Number.isFinite(groupId)) notFound();
 
@@ -37,11 +44,10 @@ export default async function AddSolvePage({ params }: { params: Promise<{ id: s
 
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">문제 직접 추가</h1>
       <p className="mt-2 text-sm text-secondary">
-        책이나 오프라인에서 푼 문제처럼 LeetCode·프로그래머스에 없는 문제를 직접 기입해요. 제목만 있어도 등록되고,
-        문제 내용과 코드는 선택입니다.
+        백준에서 맞힌 문제나 책·오프라인에서 푼 문제를 직접 기록할 수 있어요.
       </p>
 
-      <ManualSolveForm groupId={groupId} />
+      <ManualSolveForm groupId={groupId} initialPlatform={platform === "boj" ? "BOJ" : "BOOK"} />
     </main>
   );
 }

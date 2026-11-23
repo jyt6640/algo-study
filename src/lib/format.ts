@@ -46,7 +46,7 @@ export function solvesToCalendar(dates: Date[], timeZone: string): Record<string
   return cal;
 }
 
-export type DayBreakdown = { leetcode: number; programmers: number };
+export type DayBreakdown = { leetcode: number; programmers: number; baekjoon: number };
 
 /**
  * 통합 잔디: LeetCode 전체 제출 캘린더(있으면) + 프로그래머스 수집 풀이를 합친다.
@@ -54,7 +54,7 @@ export type DayBreakdown = { leetcode: number; programmers: number };
  */
 export function combineHeatmap(
   leetcodeCalendar: Record<string, number> | undefined,
-  programmersDates: Date[],
+  dates: Readonly<Record<"programmers" | "baekjoon", Date[]>>,
   timeZone: string,
 ): { total: Record<string, number>; breakdown: Record<string, DayBreakdown> } {
   const total: Record<string, number> = {};
@@ -62,14 +62,14 @@ export function combineHeatmap(
 
   for (const [k, v] of Object.entries(leetcodeCalendar ?? {})) {
     total[k] = (total[k] ?? 0) + v;
-    breakdown[k] = { leetcode: v, programmers: 0 };
+    breakdown[k] = { leetcode: v, programmers: 0, baekjoon: 0 };
   }
-  for (const date of programmersDates) {
-    const { y, mo, d } = parts(date, timeZone);
-    const key = String(Math.floor(Date.UTC(Number(y), Number(mo) - 1, Number(d)) / 1000));
-    total[key] = (total[key] ?? 0) + 1;
-    if (!breakdown[key]) breakdown[key] = { leetcode: 0, programmers: 0 };
-    breakdown[key].programmers += 1;
+  for (const platform of ["programmers", "baekjoon"] as const) {
+    for (const [key, count] of Object.entries(solvesToCalendar(dates[platform], timeZone))) {
+      total[key] = (total[key] ?? 0) + count;
+      breakdown[key] ??= { leetcode: 0, programmers: 0, baekjoon: 0 };
+      breakdown[key][platform] += count;
+    }
   }
   return { total, breakdown };
 }
@@ -85,8 +85,9 @@ export function solvesToPlatformCalendar(
     const { y, mo, d } = parts(s.acceptedAt, timeZone);
     const key = String(Math.floor(Date.UTC(Number(y), Number(mo) - 1, Number(d)) / 1000));
     total[key] = (total[key] ?? 0) + 1;
-    if (!breakdown[key]) breakdown[key] = { leetcode: 0, programmers: 0 };
+    breakdown[key] ??= { leetcode: 0, programmers: 0, baekjoon: 0 };
     if (s.platform === "PROGRAMMERS") breakdown[key].programmers += 1;
+    else if (s.platform === "BOJ") breakdown[key].baekjoon += 1;
     else breakdown[key].leetcode += 1;
   }
   return { total, breakdown };

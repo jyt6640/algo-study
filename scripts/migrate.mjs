@@ -7,6 +7,7 @@ const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");
 
 const statements = [
+  `ALTER TYPE platform ADD VALUE IF NOT EXISTS 'BOJ'`,
   `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN CREATE TYPE user_role AS ENUM ('USER', 'ADMIN'); END IF; END $$`,
   `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ledger_source') THEN CREATE TYPE ledger_source AS ENUM ('CRON', 'EXTENSION', 'IMPORT', 'MANUAL', 'LEGACY'); END IF; END $$`,
   `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'verification_level') THEN CREATE TYPE verification_level AS ENUM ('SERVER_VERIFIED', 'EXTENSION_VERIFIED', 'IMPORTED', 'MANUAL_PENDING', 'LEGACY'); END IF; END $$`,

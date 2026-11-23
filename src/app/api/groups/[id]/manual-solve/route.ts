@@ -9,7 +9,6 @@ import { bookSlug } from "@/lib/platform";
 
 export const runtime = "nodejs";
 
-// 책 등 온라인 저지가 아닌 문제를 직접 기입 (제목·문제 내용·코드).
 // 스터디 멤버 본인만 자기 풀이를 추가할 수 있다.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await currentUserId();
@@ -27,14 +26,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!parsed.success)
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력 형식이 올바르지 않습니다." }, { status: 400 });
 
-  const { title, description, code, language, difficulty } = parsed.data;
+  const { platform, description, code, language, difficulty } = parsed.data;
   const acceptedAt = parsed.data.acceptedAt ? new Date(parsed.data.acceptedAt) : new Date();
-  const slug = bookSlug(title);
+  const slug = parsed.data.platform === "BOJ" ? parsed.data.problem : bookSlug(parsed.data.title);
+  const title = parsed.data.title || `백준 ${slug}번`;
 
   const stored = await ensureTransaction((tx) =>
     appendSubmissionEvent(tx, {
       userId,
-      platform: "BOOK",
+      platform,
       problemSlug: slug,
       problemTitle: title,
       description: description || null,
@@ -42,20 +42,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       acceptedAt,
       source: "MANUAL",
       verificationLevel: "MANUAL_PENDING",
-      eventKey: submissionEventKey({
-        userId,
-        platform: "BOOK",
-        problemSlug: slug,
-        acceptedAt,
-        source: "MANUAL",
-      }),
-      code: code || undefined,
+      eventKey: platform === "BOJ"
+        ? `${userId}:BOJ:${slug}:MANUAL`
+        : submissionEventKey({ userId, platform, problemSlug: slug, acceptedAt, source: "MANUAL" }),
+      code: code?.trim() ? code : undefined,
       language: language || undefined,
     }),
   );
 
   // 같은 제목으로 이미 있으면 제목·내용·난이도를 최신 입력으로 갱신한다.
-  if (stored.solveId) {
+  if (platform === "BOOK" && stored.solveId) {
     await db
       .update(schema.solveLogs)
       .set({
@@ -66,5 +62,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .where(eq(schema.solveLogs.id, stored.solveId));
   }
 
-  return NextResponse.json({ ok: true, solveId: stored.solveId, isNew: stored.isNew });
+  return NextResponse.json({ ok: true, solveId: stored.solveId, isNew: stored.isNew, codeSaved: stored.codeSaved });
 }

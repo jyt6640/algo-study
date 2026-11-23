@@ -9,13 +9,14 @@ import {
   index,
   serial,
 } from "drizzle-orm/pg-core";
+import { platforms } from "../lib/platform";
 
 export const roleEnum = pgEnum("role", ["OWNER", "MEMBER"]);
 export const userRoleEnum = pgEnum("user_role", ["USER", "ADMIN"]);
 export const penaltyTypeEnum = pgEnum("penalty_type", ["FIXED", "PER_MISSING"]);
 export const solveSourceEnum = pgEnum("solve_source", ["LEETCODE_GQL", "EXTENSION", "MANUAL"]);
 // BOOK = 책·기타(직접 입력) — 온라인 저지가 아닌 문제를 손으로 기입할 때 사용
-export const platformEnum = pgEnum("platform", ["LEETCODE", "PROGRAMMERS", "BOOK"]);
+export const platformEnum = pgEnum("platform", platforms);
 export const verificationLevelEnum = pgEnum("verification_level", [
   "SERVER_VERIFIED",
   "EXTENSION_VERIFIED",

@@ -38,7 +38,8 @@ export default async function MyProfile() {
     .from(schema.solveLogs)
     .where(eq(schema.solveLogs.userId, userId));
   const pgDates = allSolves.filter((s) => s.platform === "PROGRAMMERS").map((s) => s.acceptedAt);
-  const { total: combinedCal, breakdown: combinedBreak } = combineHeatmap(profile?.calendar, pgDates, user.timezone);
+  const bojDates = allSolves.filter((s) => s.platform === "BOJ").map((s) => s.acceptedAt);
+  const { total: combinedCal, breakdown: combinedBreak } = combineHeatmap(profile?.calendar, { programmers: pgDates, baekjoon: bojDates }, user.timezone);
   const lcCount = profile?.solved.all ?? allSolves.filter((s) => s.platform === "LEETCODE").length;
   const pgCount = pgDates.length;
 
@@ -84,9 +85,10 @@ export default async function MyProfile() {
         <section className="card mt-6 p-6">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">잔디밭 🌱</div>
-            <div className="flex gap-3 text-xs text-secondary">
+            <div className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs text-secondary">
               <span>리트코드 {lcCount}</span>
               <span>프로그래머스 {pgCount}</span>
+              {bojDates.length > 0 && <span>백준 {bojDates.length}</span>}
             </div>
           </div>
           <p className="mb-3 mt-1 text-xs text-secondary">칸에 마우스를 올리면 플랫폼별 개수가 보여요.</p>

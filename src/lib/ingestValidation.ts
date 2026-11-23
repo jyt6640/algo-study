@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { baekjoonProblemNumber } from "./platform";
 
 export const MAX_BODY_BYTES = 1_048_576;
 export const MAX_BULK_ITEMS = 100;
@@ -40,15 +41,37 @@ export const linkPayloadSchema = z.object({
 export const handlePayloadSchema = linkPayloadSchema.extend({ platform: z.enum(["LEETCODE", "PROGRAMMERS"]).default("LEETCODE") });
 export const tokenDeleteSchema = z.object({ id: z.number().int().positive() });
 
-// 책 등 온라인 저지가 아닌 문제를 직접 기입
-export const manualSolveSchema = z.object({
-  title: z.string().trim().min(1, "문제 제목을 입력하세요.").max(240),
+const manualSolveFields = {
   description: z.string().trim().max(20_000).optional(),
   code: z.string().max(MAX_CODE_LENGTH).optional(),
   language: z.string().trim().max(80).optional(),
   difficulty: z.string().trim().max(80).optional(),
   acceptedAt: isoDate.optional(),
-});
+};
+
+export const manualSolveSchema = z.preprocess(
+  (input) => typeof input === "object" && input !== null && !("platform" in input)
+    ? { ...input, platform: "BOOK" }
+    : input,
+  z.discriminatedUnion("platform", [
+    z.object({
+      ...manualSolveFields,
+      platform: z.literal("BOOK"),
+      title: z.string().trim().min(1, "문제 제목을 입력하세요.").max(240),
+    }),
+    z.object({
+      ...manualSolveFields,
+      platform: z.literal("BOJ"),
+      title: z.string().trim().max(240).optional(),
+      problem: z.string().trim().max(300).transform((value, ctx) => {
+        const number = baekjoonProblemNumber(value);
+        if (number) return number;
+        ctx.addIssue({ code: "custom", message: "백준 문제 번호나 문제 링크를 입력하세요." });
+        return z.NEVER;
+      }),
+    }),
+  ]),
+);
 
 export const nicknameSchema = z.object({
   nickname: z.string().trim().min(1, "닉네임을 입력하세요.").max(30, "닉네임은 30자 이하로 해주세요."),

@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     const behind: string[] = [];
     for (const m of members) {
       const [{ cnt }] = await db
-        .select({ cnt: sql<number>`count(distinct ${schema.solveLogs.problemSlug})::int` })
+        .select({ cnt: sql<number>`count(*)::int` })
         .from(schema.solveLogs)
         .where(
           and(

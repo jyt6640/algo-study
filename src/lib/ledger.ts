@@ -1,6 +1,7 @@
 import { and, eq, type ExtractTablesWithRelations } from "drizzle-orm";
 import type { NeonTransaction } from "drizzle-orm/neon-serverless";
 import { db, schema } from "@/db";
+import type { Platform } from "@/lib/platform";
 
 export type LedgerTransaction = NeonTransaction<
   typeof schema,
@@ -9,7 +10,7 @@ export type LedgerTransaction = NeonTransaction<
 
 export type LedgerSubmissionInput = {
   readonly userId: number;
-  readonly platform: "LEETCODE" | "PROGRAMMERS" | "BOOK";
+  readonly platform: Platform;
   readonly problemSlug: string;
   readonly problemTitle?: string | null;
   /** 직접 기입(책 등) 문제의 본문 */
@@ -76,13 +77,15 @@ export async function appendSubmissionEvent(
 
   let eventId = insertedEvent[0]?.id;
   const isNew = insertedEvent.length > 0;
+  let acceptedAt = input.acceptedAt;
   if (!eventId) {
     const [existingEvent] = await tx
-      .select({ id: schema.submissionEvents.id })
+      .select({ id: schema.submissionEvents.id, acceptedAt: schema.submissionEvents.acceptedAt })
       .from(schema.submissionEvents)
       .where(eq(schema.submissionEvents.eventKey, input.eventKey))
       .limit(1);
     eventId = existingEvent?.id;
+    if (existingEvent && input.platform === "BOJ") acceptedAt = existingEvent.acceptedAt;
   }
   if (!eventId) throw new Error("submission event was not persisted");
 
@@ -95,7 +98,7 @@ export async function appendSubmissionEvent(
       problemTitle: input.problemTitle ?? null,
       description: input.description ?? null,
       difficulty: input.difficulty ?? null,
-      acceptedAt: input.acceptedAt,
+      acceptedAt,
       source: input.source === "CRON" ? "LEETCODE_GQL" : input.source === "MANUAL" ? "MANUAL" : "EXTENSION",
     })
     .onConflictDoNothing({
@@ -121,7 +124,7 @@ export async function appendSubmissionEvent(
   if (!solveId) throw new Error("legacy solve projection was not persisted");
 
   let codeSaved = false;
-  if (input.code) {
+  if (input.code && (input.platform !== "BOJ" || isNew || insertedSolve.length > 0)) {
     const [existingCode] = await tx
       .select({ id: schema.submissionCodeVersions.id })
       .from(schema.submissionCodeVersions)
@@ -137,7 +140,7 @@ export async function appendSubmissionEvent(
         eventId,
         language: input.language ?? null,
         code: input.code,
-        submittedAt: input.acceptedAt,
+        submittedAt: acceptedAt,
       });
     }
     await tx
@@ -146,11 +149,11 @@ export async function appendSubmissionEvent(
         solveLogId: solveId,
         language: input.language ?? null,
         code: input.code,
-        submittedAt: input.acceptedAt,
+        submittedAt: acceptedAt,
       })
       .onConflictDoUpdate({
         target: schema.submissions.solveLogId,
-        set: { language: input.language ?? null, code: input.code, submittedAt: input.acceptedAt },
+        set: { language: input.language ?? null, code: input.code, submittedAt: acceptedAt },
       });
     codeSaved = true;
   }
@@ -160,7 +163,7 @@ export async function appendSubmissionEvent(
 
 export function submissionEventKey(input: {
   readonly userId: number;
-  readonly platform: "LEETCODE" | "PROGRAMMERS" | "BOOK";
+  readonly platform: Platform;
   readonly problemSlug: string;
   readonly acceptedAt: Date;
   readonly source: string;

@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { acceptedAtISO } from "@/lib/acceptedAt";
 
 const LANGS = ["Java", "Python", "C++", "JavaScript", "TypeScript", "C", "C#", "Kotlin", "Swift", "Go", "Rust"];
 
-export function ManualSolveForm({ groupId }: { groupId: number }) {
+export function ManualSolveForm({ groupId, initialPlatform }: { readonly groupId: number; readonly initialPlatform: "BOOK" | "BOJ" }) {
   const router = useRouter();
+  const [platform, setPlatform] = useState(initialPlatform);
+  const [problem, setProblem] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [code, setCode] = useState("");
@@ -18,8 +21,12 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit() {
-    if (!title.trim() || busy) return;
+  const isBaekjoon = platform === "BOJ";
+  const canSave = Boolean((isBaekjoon ? problem : title).trim()) && !busy;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSave) return;
     setBusy(true);
     setError(null);
     try {
@@ -27,8 +34,10 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
+          platform,
+          problem: isBaekjoon ? problem.trim() : undefined,
+          title: title.trim() || undefined,
+          description: isBaekjoon ? undefined : description.trim() || undefined,
           code: code || undefined,
           language: code ? language : undefined,
           difficulty: difficulty.trim() || undefined,
@@ -39,7 +48,9 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        router.push(`/groups/${groupId}`);
+        router.push(isBaekjoon && Number.isSafeInteger(data.solveId)
+          ? `/groups/${groupId}/solve/${data.solveId}`
+          : `/groups/${groupId}`);
         router.refresh();
       } else {
         setError(data.error || "저장에 실패했어요.");
@@ -52,19 +63,49 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
   }
 
   return (
-    <div className="mt-6 space-y-5">
+    <form onSubmit={submit} className="mt-6 space-y-5">
       <div>
-        <label className="text-sm font-semibold">문제 제목 *</label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value.slice(0, 240))}
-          placeholder="예: 이것이 코딩테스트다 - 떡볶이 떡 만들기"
+        <label htmlFor="solve-platform" className="text-sm font-semibold">플랫폼</label>
+        <select
+          id="solve-platform"
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value === "BOJ" ? "BOJ" : "BOOK")}
           className="input mt-2"
-        />
-        <p className="mt-1 text-xs text-secondary">같은 제목으로 다시 저장하면 기존 기록이 갱신돼요.</p>
+        >
+          <option value="BOOK">책·기타</option>
+          <option value="BOJ">백준</option>
+        </select>
       </div>
 
+      {isBaekjoon && (
+        <div>
+          <label htmlFor="solve-problem" className="text-sm font-semibold">백준 문제 링크 또는 번호</label>
+          <input
+            id="solve-problem"
+            value={problem}
+            onChange={(e) => setProblem(e.target.value)}
+            placeholder="https://acmicpc.net/problem/1000"
+            maxLength={300}
+            required
+            className="input mt-2"
+          />
+        </div>
+      )}
+
       <div>
+        <label htmlFor="solve-title" className="text-sm font-semibold">{isBaekjoon ? "문제 제목 (선택)" : "문제 제목 *"}</label>
+        <input
+          id="solve-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value.slice(0, 240))}
+          placeholder={isBaekjoon ? "예: A+B" : "예: 떡볶이 떡 만들기"}
+          required={!isBaekjoon}
+          className="input mt-2"
+        />
+        {!isBaekjoon && <p className="mt-1 text-xs text-secondary">같은 제목으로 다시 저장하면 기존 기록이 갱신돼요.</p>}
+      </div>
+
+      {!isBaekjoon && <div>
         <label className="text-sm font-semibold">문제 내용</label>
         <div className="mt-2">
           <MarkdownEditor
@@ -74,7 +115,7 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
             placeholder={"문제 지문을 붙여넣거나 요약해서 적어주세요. (선택)\n\n## 입력\n- N (1 ≤ N ≤ 100)\n\n## 예시\n```\n입력: 3\n출력: 6\n```"}
           />
         </div>
-      </div>
+      </div>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
@@ -117,17 +158,17 @@ export function ManualSolveForm({ groupId }: { groupId: number }) {
       </div>
 
       {error && (
-        <p className="text-sm" style={{ color: "var(--danger)" }}>
+        <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
           {error}
         </p>
       )}
 
       <div className="flex items-center gap-3">
-        <button onClick={submit} disabled={busy || !title.trim()} className="btn btn-primary" style={{ opacity: busy || !title.trim() ? 0.5 : 1 }}>
+        <button type="submit" disabled={!canSave} className="btn btn-primary">
           {busy ? "저장 중…" : "추가하기"}
         </button>
-        <span className="text-xs text-secondary">추가하면 이번 기간 목표 개수에 반영돼요.</span>
+        <span className="text-xs text-secondary">선택한 풀이 날짜 기준으로 집계돼요.</span>
       </div>
-    </div>
+    </form>
   );
 }

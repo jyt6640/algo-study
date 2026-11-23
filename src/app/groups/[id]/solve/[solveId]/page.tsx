@@ -121,6 +121,7 @@ export default async function SolvePage({
         </Link>
         <span>·</span>
         <span>{fmtDateTime(solve.acceptedAt, tz)} 해결</span>
+        {solve.platform === "BOJ" && <span>· 백준 직접 등록</span>}
         {solve.difficulty && (
           <>
             <span>·</span>

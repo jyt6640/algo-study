@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     memberships.map(async (g) => {
       const { start, end } = currentPeriod(new Date(), g);
       const [{ cnt }] = await db
-        .select({ cnt: sql<number>`count(distinct ${schema.solveLogs.problemSlug})::int` })
+        .select({ cnt: sql<number>`count(*)::int` })
         .from(schema.solveLogs)
         .where(
           and(
@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
   const recent = await db
     .select({
       slug: schema.solveLogs.problemSlug,
+      platform: schema.solveLogs.platform,
       title: schema.solveLogs.problemTitle,
       acceptedAt: schema.solveLogs.acceptedAt,
       source: schema.solveLogs.source,

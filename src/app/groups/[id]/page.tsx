@@ -295,8 +295,8 @@ export default async function GroupDashboard({
       {isMember && !ended && !viewingPast && (
         <div className="mt-6 flex flex-col items-stretch gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--border)" }}>
           <div className="text-sm">
-            <div className="font-medium">📖 책·오프라인 문제도 인정</div>
-            <div className="text-secondary">LeetCode·프로그래머스에 없는 문제는 직접 기입하세요.</div>
+            <div className="font-medium">백준·책·오프라인 문제</div>
+            <div className="text-secondary">직접 푼 문제를 스터디 기록에 추가하세요.</div>
           </div>
           <Link href={`/groups/${groupId}/add`} className="btn btn-secondary shrink-0 !px-4 !py-2 text-sm">
             문제 직접 추가
