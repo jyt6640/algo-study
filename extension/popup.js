@@ -81,7 +81,11 @@ function renderDashboard(data) {
         return `<div style="margin-bottom:10px">
           <div class="row"><b>${esc(s.name)}</b>${right}</div>
           ${segBar(s.solved, s.quota)}
-          <div class="sub" style="text-align:right;margin-top:3px">${s.solved}/${s.quota}</div>
+          <div class="row sub">
+            ${Number.isSafeInteger(s.groupId) && s.groupId > 0
+              ? `<a href="${API_BASE}/groups/${s.groupId}/add?platform=boj" target="_blank" rel="noopener">백준 풀이 등록</a>` : ""}
+            <span style="margin-left:auto">${s.solved}/${s.quota}</span>
+          </div>
         </div>`;
       })
       .join("");
@@ -91,10 +95,15 @@ function renderDashboard(data) {
   if (data.recent && data.recent.length) {
     recent = data.recent
       .slice(0, 8)
-      .map(
-        (r) =>
-          `<div class="row"><a href="https://leetcode.com/problems/${esc(r.slug)}/" target="_blank">${esc(r.title || r.slug)}</a><span class="sub">${esc(String(r.acceptedAt).slice(0, 10))}</span></div>`,
-      )
+      .map((r) => {
+        const slug = encodeURIComponent(r.slug);
+        const url = r.platform === "BOJ" ? `https://acmicpc.net/problem/${slug}`
+          : r.platform === "PROGRAMMERS" ? `https://school.programmers.co.kr/learn/courses/30/lessons/${slug}`
+          : r.platform === "BOOK" ? null : `https://leetcode.com/problems/${slug}/`;
+        const title = esc(r.title || r.slug);
+        const name = url ? `<a href="${url}" target="_blank" rel="noopener">${title}</a>` : `<span>${title}</span>`;
+        return `<div class="row">${name}<span class="sub">${esc(String(r.acceptedAt).slice(0, 10))}</span></div>`;
+      })
       .join("");
   } else {
     recent = '<p class="muted">아직 수집된 풀이가 없어요.</p>';
